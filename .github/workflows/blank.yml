@@ -38,7 +38,7 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: List Contents of S3 Bucket
         run: |
-          aws s3 cp s3://my-aws-bucket-qw/ .
+          aws s3 cp s3://my-aws-bucket-qw/temp.txt temp.txt
       - name: Run a multi-line script
         run: |
           pwd
