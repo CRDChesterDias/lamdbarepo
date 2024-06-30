@@ -1,0 +1,11 @@
+user_data = <<-EOT
+              #!/bin/bash
+              sudo echo "testhost" > /etc/hostname
+              sudo hostnamectl set-hostname testhost
+
+              sudo echo "127.0.0.1 testhost.aws.com testhost" >> /etc/hosts
+              sudo hostnamectl set-hostname --static testhost.aws.com
+
+              sudo systemctl restart systemd-networkd
+              sudo reboot
+              EOT
