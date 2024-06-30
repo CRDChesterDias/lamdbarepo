@@ -1,3 +1,4 @@
+Linux script working as expected
 user_data = <<-EOT
               #!/bin/bash
               sudo echo "testhost" > /etc/hostname
@@ -9,3 +10,20 @@ user_data = <<-EOT
               sudo systemctl restart systemd-networkd
               sudo reboot
               EOT
+
+
+Windows script has NOT been tested and still needs further finetuning
+  user_data = <<-EOT
+              <powershell>
+              # Set the new hostname
+              $newHostname = "testhost"
+              # Set the hostname using Rename-Computer
+              Rename-Computer -NewName $newHostname -Force
+              $DNSSuffix = "abc.com"
+              $oldDNSSuffix = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\" -Name "NV Domain")."NV Domain"
+              #Update primary DNS Suffix for FQDN
+              Set-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\" -Name Domain -Value $DNSSuffix
+              Set-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\" -Name "NV Domain" -Value $DNSSuffix
+              </powershell>
+       
+             EOT
