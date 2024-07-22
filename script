@@ -27,3 +27,16 @@ Windows script has NOT been tested and still needs further finetuning
               </powershell>
        
              EOT
+
+
+ $hostnamesFile = "C:\DetailedLogs.txt"
+                  Get-Content $hostnamesFile | Out-File -FilePath $hostnamesFile -Encoding UTF8
+                  Add-Content -Path $hostnamesFile -Value $currentHostname
+                  $fileContent = Get-Content $hostnamesFile -Raw
+                    if ($fileContent -nomatch "ARC installed") {
+                      Add-Content -Path $hostnamesFile -Value 'ARC installed'
+                    }
+                    if ($fileContent -nomatch "NESUS installed") {
+                      Add-Content -Path $hostnamesFile -Value 'NESUS installed'
+                    }  
+                  }
