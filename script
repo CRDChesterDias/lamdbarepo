@@ -30,13 +30,13 @@ Windows script has NOT been tested and still needs further finetuning
 
 
  $hostnamesFile = "C:\DetailedLogs.txt"
+                  $currentHostname = (Get-WmiObject Win32_ComputerSystem).Name
                   Get-Content $hostnamesFile | Out-File -FilePath $hostnamesFile -Encoding UTF8
                   Add-Content -Path $hostnamesFile -Value $currentHostname
                   $fileContent = Get-Content $hostnamesFile -Raw
-                    if ($fileContent -nomatch "ARC installed") {
+                    if ($fileContent -notlike "*ARC*") {
                       Add-Content -Path $hostnamesFile -Value 'ARC installed'
                     }
-                    if ($fileContent -nomatch "NESUS installed") {
+                    if ($fileContent -notlike "*NESUS*") {
                       Add-Content -Path $hostnamesFile -Value 'NESUS installed'
                     }  
-                  }
