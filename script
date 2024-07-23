@@ -29,14 +29,30 @@ Windows script has NOT been tested and still needs further finetuning
              EOT
 
 
- $hostnamesFile = "C:\DetailedLogs.txt"
+user_data = <<-EOT
+              <powershell>
+                $newHostname = "testhost"
+                $currentHostname = (Get-WmiObject Win32_ComputerSystem).Name
+                if ($currentHostname -ne $newHostname) {
+                  Rename-Computer -NewName $newHostname -Force
+                  Restart-Computer -Force
+                }
+                else {
+                  $hostnamesFile = "C:\DetailedLogs.txt"
                   $currentHostname = (Get-WmiObject Win32_ComputerSystem).Name
                   Get-Content $hostnamesFile | Out-File -FilePath $hostnamesFile -Encoding UTF8
                   Add-Content -Path $hostnamesFile -Value $currentHostname
                   $fileContent = Get-Content $hostnamesFile -Raw
-                    if ($fileContent -notlike "*ARC*") {
+                  if ($fileContent -notlike "*ARC*") {
+                      $hostnamesFile = "C:\DetailedLogs.txt"
                       Add-Content -Path $hostnamesFile -Value 'ARC installed'
                     }
-                    if ($fileContent -notlike "*NESUS*") {
+                  if ($fileContent -notlike "*NESUS*") {
+                      $hostnamesFile = "C:\DetailedLogs.txt"
                       Add-Content -Path $hostnamesFile -Value 'NESUS installed'
-                    }  
+                    }
+                  }
+                
+              </powershell>
+              <persist>true</persist>
+             EOT
