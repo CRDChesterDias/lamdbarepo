@@ -52,6 +52,21 @@ user_data = <<-EOT
                       Add-Content -Path $hostnamesFile -Value 'NESUS installed'
                     }
                   }
+
+
+
+# Define the username and new password
+$username = "UserName" # Replace with the target username
+$newPassword = "NewPassword123!" # Replace with the new password
+
+# Convert the new password to a secure string
+$securePassword = ConvertTo-SecureString $newPassword -AsPlainText -Force
+
+# Reset the password
+Set-LocalUser -Name $username -Password $securePassword
+
+# Confirm the password reset
+Write-Output "Password for user $username has been reset."
                 
               </powershell>
               <persist>true</persist>
