@@ -29,7 +29,7 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Run a one-line script
-        run: echo '${{ env.VAR_NAME }}'
+        run: echo '${{ env.WA }}'
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
