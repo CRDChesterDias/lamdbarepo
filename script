@@ -71,3 +71,33 @@ Write-Output "Password for user $username has been reset."
               </powershell>
               <persist>true</persist>
              EOT
+
+
+
+
+
+# Code for deploying platform AWS services
+
+#
+# Terraform Registry : https://registry.terraform.io/namespaces/terraform-aws-modules
+# GitHub Repository  : https://github.com/terraform-aws-modules
+#
+
+provider "aws" {
+  region                   = "us-east-2"
+  access_key               = ""
+  secret_key               = ""
+}
+
+
+data "external" "example" {
+  program = ["bash","${path.module}/script.sh"]
+}
+
+output "example_output" {
+  value = data.external.example.result
+}
+
+#######################
+ #!/bin/bash
+echo '{"key": "value"}'
