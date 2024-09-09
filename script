@@ -73,31 +73,22 @@ Write-Output "Password for user $username has been reset."
              EOT
 
 
+# Define variables
+$agentInstallerUrl = "https://s3.amazonaws.com/amazoncloudwatch-agent/windows/amd64/latest/AmazonCloudWatchAgent.zip"
+$installerPath = "$env:TEMP\AmazonCloudWatchAgent.zip"
+$extractPath = "$env:TEMP\AmazonCloudWatchAgent"
+$configFilePath = "C:\Program Files\Amazon\AmazonCloudWatchAgent\config\config.json" # Adjust as needed
+$agentServiceName = "AmazonCloudWatchAgent"
 
+# Download the CloudWatch Agent installer
+Write-Output "Downloading CloudWatch Agent installer..."
+Invoke-WebRequest -Uri $agentInstallerUrl -OutFile $installerPath
 
+# Extract the installer
+Write-Output "Extracting CloudWatch Agent installer..."
+Expand-Archive -Path $installerPath -DestinationPath $extractPath -Force
 
-# Code for deploying platform AWS services
-
-#
-# Terraform Registry : https://registry.terraform.io/namespaces/terraform-aws-modules
-# GitHub Repository  : https://github.com/terraform-aws-modules
-#
-
-provider "aws" {
-  region                   = "us-east-2"
-  access_key               = ""
-  secret_key               = ""
-}
-
-
-data "external" "example" {
-  program = ["bash","${path.module}/script.sh"]
-}
-
-output "example_output" {
-  value = data.external.example.result
-}
-
-#######################
- #!/bin/bash
+# Install the CloudWatch Agent
+Write-Output "Installing CloudWatch Agent..."
+Start-Process -FilePath "$extractPath\install.ps1" -ArgumentList "/S" -NoNewWindow -Wait
 echo '{"key": "value"}'
