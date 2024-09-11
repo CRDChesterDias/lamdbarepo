@@ -74,21 +74,16 @@ Write-Output "Password for user $username has been reset."
 
 
 # Define variables
-$agentInstallerUrl = "https://s3.amazonaws.com/amazoncloudwatch-agent/windows/amd64/latest/AmazonCloudWatchAgent.zip"
-$installerPath = "$env:TEMP\AmazonCloudWatchAgent.zip"
-$extractPath = "$env:TEMP\AmazonCloudWatchAgent"
-$configFilePath = "C:\Program Files\Amazon\AmazonCloudWatchAgent\config\config.json" # Adjust as needed
+$agentInstallerUrl = "https://amazoncloudwatch-agent.s3.amazonaws.com/windows/amd64/latest/amazon-cloudwatch-agent.msi"
 $agentServiceName = "AmazonCloudWatchAgent"
 
-# Download the CloudWatch Agent installer
+# Download the CloudWatch Agent installers
 Write-Output "Downloading CloudWatch Agent installer..."
-Invoke-WebRequest -Uri $agentInstallerUrl -OutFile $installerPath
+Invoke-WebRequest -Uri $agentInstallerUrl -OutFile 'C:\amazon-cloudwatch-agent.msi'
 
-# Extract the installer
-Write-Output "Extracting CloudWatch Agent installer..."
-Expand-Archive -Path $installerPath -DestinationPath $extractPath -Force
-
-# Install the CloudWatch Agent
-Write-Output "Installing CloudWatch Agent..."
+Write-Output "CloudWatch Agent installation..."
+Start-Process msiexec.exe -ArgumentList "/i `"C:\amazon-cloudwatch-agent.msi`"" -Wait -NoNewWindow
+Write-Output "CloudWatch Agent installed..."
+& "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a start -m ec2 -s
 Start-Process -FilePath "$extractPath\install.ps1" -ArgumentList "/S" -NoNewWindow -Wait
 echo '{"key": "value"}'
