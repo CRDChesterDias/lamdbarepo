@@ -74,16 +74,16 @@ Write-Output "Password for user $username has been reset."
 
 
 # Define variables
-$agentInstallerUrl = "https://amazoncloudwatch-agent.s3.amazonaws.com/windows/amd64/latest/amazon-cloudwatch-agent.msi"
-$agentServiceName = "AmazonCloudWatchAgent"
+# Define an EC2 instance
+resource "aws_instance" "example" {
+  ami           = "ami-0cc80d2a8e1d89ddc" # Replace with a valid AMI ID for your region
+  instance_type = "t2.medium"
+  key_name      = "op" # Replace with your key pair name
 
-# Download the CloudWatch Agent installers
-Write-Output "Downloading CloudWatch Agent installer..."
-Invoke-WebRequest -Uri $agentInstallerUrl -OutFile 'C:\amazon-cloudwatch-agent.msi'
+  subnet_id = "subnet-0894080490726ec6d"
 
-Write-Output "CloudWatch Agent installation..."
-Start-Process msiexec.exe -ArgumentList "/i `"C:\amazon-cloudwatch-agent.msi`"" -Wait -NoNewWindow
-Write-Output "CloudWatch Agent installed..."
-& "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a start -m ec2 -s
-Start-Process -FilePath "$extractPath\install.ps1" -ArgumentList "/S" -NoNewWindow -Wait
-echo '{"key": "value"}'
+  tags = {
+    Name = "example-instance"
+  }
+  user_data = file("script.ps1")
+}
