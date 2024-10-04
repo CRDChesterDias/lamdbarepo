@@ -87,3 +87,7 @@ resource "aws_instance" "example" {
   }
   user_data = file("script.ps1")
 }
+
+
+aws rds describe-db-instances --query "DBInstances[?DBName=='your-db-name'].DBInstanceIdentifier" --output text
+
