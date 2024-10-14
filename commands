@@ -20,6 +20,7 @@ sudo mkdir -p /var/log/audit
 sudo mkdir -p /opt
 sudo mkdir -p /tmp
 
+defaults,noexec,nosuid,nodev
 
   54  sudo mount /dev/vg_data/var_tmp /var/tmp
    55  sudo mount /dev/vg_data/var_log /var/log
