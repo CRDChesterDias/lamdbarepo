@@ -1,0 +1,59 @@
+sudo yum install lvm2
+lsblk
+sudo pvcreate /dev/xvdb
+sudo vgcreate vg_data /dev/xvdb
+sudo lvcreate -L 5G -n var_tmp vg_data
+sudo lvcreate -L 20G -n var_log vg_data
+sudo lvcreate -L 10G -n var_log_audit vg_data
+sudo lvcreate -L 50G -n opt vg_data
+sudo lvcreate -L 2G -n tmp vg_data
+
+
+sudo mkfs.ext4 /dev/vg_data/var_tmp
+sudo mkfs.ext4 /dev/vg_data/var_log
+sudo mkfs.ext4 /dev/vg_data/var_log_audit
+sudo mkfs.ext4 /dev/vg_data/opt
+sudo mkfs.ext4 /dev/vg_data/tmp
+sudo mkdir -p /var/tmp
+sudo mkdir -p /var/log
+sudo mkdir -p /var/log/audit
+sudo mkdir -p /opt
+sudo mkdir -p /tmp
+
+
+  54  sudo mount /dev/vg_data/var_tmp /var/tmp
+   55  sudo mount /dev/vg_data/var_log /var/log
+   56  sudo mount /dev/vg_data/var_log_audit /var/log/audit
+   57  sudo mkdir -p /var/log/audit
+   58  sudo mount /dev/vg_data/var_log_audit /var/log/audit
+   59  sudo mkdir -p /opt
+   60  sudo mkdir -p /tmp
+   61  sudo mount /dev/vg_data/opt /opt
+   62  sudo mount /dev/vg_data/tmp /tmp
+
+ 63  echo '/dev/vg_data/var_tmp /var/tmp ext4 defaults 0 0' | sudo tee -a /etc/fstab
+   64  echo '/dev/vg_data/var_log /var/log ext4 defaults 0 0' | sudo tee -a /etc/fstab
+   65  echo '/dev/vg_data/var_log_audit /var/log/audit ext4 defaults 0 0' | sudo tee -a /etc/fstab
+   66  echo '/dev/vg_data/opt /opt ext4 defaults 0 0' | sudo tee -a /etc/fstab
+   67  echo '/dev/vg_data/tmp /tmp ext4 defaults 0 0' | sudo tee -a /etc/fstab
+   68  sudo systemctl daemon-reload
+
+
+   70  df -kh
+   71  lsblk
+   72  sudo lvcreate -L 10G -n var vg_data
+   73  sudo mkfs.ext4 /dev/vg_data/var
+   74  sudo mkdir -p /var
+   75  sudo mount /dev/vg_data/var /var
+   76  echo '/dev/vg_data/var /var ext4 defaults 0 0' | sudo tee -a /etc/fstab
+   77  df -kh
+   78  sudo nano /etc/fstab
+   79  sudo vi /etc/fstab
+   80  mount | grep /tmp
+   81  sudo vi /etc/fstab
+   82  sudo systemctl daemon-reload
+   83  mount | grep /tmp
+   84  df -kh
+   85  sudo reboot
+   86  mount | grep /tmp
+   87  df -kh
