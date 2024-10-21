@@ -13,6 +13,8 @@
 > [!CAUTION]
 > Negative potential consequences of an action.dsc
 
+![Terraform](https://img.shields.io/badge/Terraform-1.3.6-blue)
+
 
 <table>
   <tr>
