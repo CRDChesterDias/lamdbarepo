@@ -15,6 +15,7 @@
 
 ![Terraform](https://img.shields.io/badge/Terraform-1.3.6-blue)
 
+![Node.js](https://img.shields.io/badge/Node.js-18.16.0-brightgreen)
 
 <table>
   <tr>
