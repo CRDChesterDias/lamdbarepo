@@ -43,3 +43,7 @@ locals {
 
 
 }
+
+
+      for az_key, az_value in entry.cross_az != null ? entry.cross_az : {} : merge(
+
