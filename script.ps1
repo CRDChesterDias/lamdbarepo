@@ -25,17 +25,21 @@ locals {
   }
 
   # Convert original_config to the desired new_config structure
-  new_config = [
-    for az_key, az_value in local.original_config.cross_az : merge(
-      {
-        cidr_block = local.original_config.cidr_block
-        purpose    = local.original_config.purpose
-      },
-      {
-        cross_az = {
-          az_key = az_value
+    new_config = flatten([
+    for entry in local.original_config : [
+      for az_key, az_value in entry.cross_az : merge(
+        {
+          cidr_block = entry.cidr_block
+          purpose    = entry.purpose
+        },
+        {
+          cross_az = {
+            az_key = az_value
+          }
         }
-      }
-    )
-  ]
+      )
+    ]
+  ])
+
+
 }
