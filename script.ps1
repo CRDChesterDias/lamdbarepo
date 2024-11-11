@@ -53,6 +53,6 @@ export AWS_SESSION_TOKEN=$(echo $CREDS | jq -r '.Credentials.SessionToken')
 
 aws networkmanager describe-global-networks --query "GlobalNetworks[0].CoreNetwork.Arn"
 aws ram get-resource-shares --query "resourceShares[0].resourceShareArn"
-aws networkmanager describe-core-networks --query "CoreNetworks[0].CoreNetworkId"
+aws networkmanager describe-global-networks --query "GlobalNetworks[0].CoreNetworkId" --output text
 
 aws s3 cp /path/to/local/file.txt s3://your-bucket-name/your-folder/file.txt
