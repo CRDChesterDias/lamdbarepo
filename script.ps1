@@ -56,3 +56,8 @@ aws ram get-resource-shares --query "resourceShares[0].resourceShareArn"
 aws networkmanager describe-global-networks --query "GlobalNetworks[0].CoreNetworkId" --output text
 
 aws s3 cp /path/to/local/file.txt s3://your-bucket-name/your-folder/file.txt
+
+
+aws networkmanager describe-global-networks
+aws networkmanager describe-attachments --global-network-id gn-0123456789abcdef0
+
