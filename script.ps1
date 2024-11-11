@@ -53,4 +53,5 @@ export AWS_SESSION_TOKEN=$(echo $CREDS | jq -r '.Credentials.SessionToken')
 
 aws networkmanager describe-global-networks --query "GlobalNetworks[0].CoreNetwork.Arn"
 aws ram get-resource-shares --query "resourceShares[0].resourceShareArn"
+aws networkmanager describe-core-networks --query "CoreNetworks[0].CoreNetworkId"
 
