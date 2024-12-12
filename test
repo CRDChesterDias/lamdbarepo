@@ -1,0 +1,68 @@
+const { Octokit } = require("@octokit/rest");
+
+// Replace with your GitHub personal access token
+const GITHUB_TOKEN = "your_personal_access_token";
+const OWNER = "your_repo_owner"; // e.g., "octocat"
+const REPO = "your_repo_name"; // e.g., "Hello-World"
+const PULL_REQUEST_NUMBER = 1; // Replace with the pull request number you want to process
+
+const octokit = new Octokit({ auth: GITHUB_TOKEN });
+
+async function createIssueOnPRMerge() {
+  try {
+    // Get PR details
+    const { data: pr } = await octokit.pulls.get({
+      owner: OWNER,
+      repo: REPO,
+      pull_number: PULL_REQUEST_NUMBER,
+    });
+
+    // Check if the PR is merged
+    if (!pr.merged) {
+      console.log(`PR #${PULL_REQUEST_NUMBER} is not merged.`);
+      return;
+    }
+
+    console.log(`PR #${PULL_REQUEST_NUMBER} is merged by ${pr.merged_by.login}`);
+
+    // Get merge commit details
+    const { data: commitDetails } = await octokit.repos.getCommit({
+      owner: OWNER,
+      repo: REPO,
+      ref: pr.merge_commit_sha,
+    });
+
+    const mergeMessage = commitDetails.commit.message;
+
+    // Create an issue
+    const issueTitle = `Follow-up: ${pr.title}`;
+    const issueBody = `
+A pull request (#${PULL_REQUEST_NUMBER}) was merged by @${pr.merged_by.login}.
+
+**Merge Commit Message:**
+\`\`\`
+${mergeMessage}
+\`\`\`
+
+Consider following up on:
+- Additional documentation
+- Bug fixes or edge cases
+- Any pending tasks from the PR description.
+
+_This issue was automatically created._
+`;
+
+    const { data: issue } = await octokit.issues.create({
+      owner: OWNER,
+      repo: REPO,
+      title: issueTitle,
+      body: issueBody,
+    });
+
+    console.log(`Created issue #${issue.number}: ${issue.html_url}`);
+  } catch (error) {
+    console.error("Error creating issue:", error.message);
+  }
+}
+
+createIssueOnPRMerge();
