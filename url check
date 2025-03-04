@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Configuration
+URL="https://google.com"  # Change this to the URL you want to monitor
+#LOG_FILE="/var/log/url_monitor.log"
+EXPECTED_STATUS="200"
+#ALERT_EMAIL="your-email@example.com"  # Set to receive alerts
+CHECK_INTERVAL=60  # Check interval in seconds
+
+# Function to log messages
+#log_message() {
+#    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+#}
+
+# Function to check URL status
+check_url() {
+    RESPONSE_CODE=$(curl -o /dev/null -s -w "%{http_code}\n" "$URL")
+
+#    if [ "$RESPONSE_CODE" == "$EXPECTED_STATUS" ]; then
+ #       log_message "✅ URL: $URL is UP (Response: $RESPONSE_CODE)"
+  #  else
+   #     log_message "❌ ALERT: URL: $URL is DOWN (Response: $RESPONSE_CODE)"
+    #
+        # Send an email alert (requires mail utility)
+        echo "The URL $URL returned status $RESPONSE_CODE on $(hostname)"
+    #fi
+}
+
+# Run the check in a loop
+#while true; do
+    check_url
+ #   sleep "$CHECK_INTERVAL"
+#done
