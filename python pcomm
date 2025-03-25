@@ -1,0 +1,32 @@
+import time
+import win32com.client
+
+# Create a PCOMM Session Object
+try:
+    session = win32com.client.Dispatch("PCOMM.autECLSession")
+    session.SetConnectionByName("A")  # Change "A" to your session name if different
+    session.autECLOIA.WaitForAppAvailable()
+    session.autECLOIA.WaitForInputReady()
+
+    print("✅ PCOMM Session Connected!")
+
+    # Create Presentation Space Object (Screen Automation)
+    ps = win32com.client.Dispatch("PCOMM.autECLPS")
+
+    # Enter Username (Adjust Row/Col Based on Your Mainframe Screen)
+    ps.SetCursorPos(5, 20)  # Adjust based on your login screen
+    ps.SendKeys("your_username")
+    time.sleep(1)
+
+    # Move to Password Field and Enter Password
+    ps.SetCursorPos(6, 20)  # Adjust row/col as needed
+    ps.SendKeys("your_password")
+    time.sleep(1)
+
+    # Press Enter to Log In
+    ps.SendKeys("[enter]")
+
+    print("✅ Login Successful!")
+
+except Exception as e:
+    print(f"❌ Error: {e}")
