@@ -1,0 +1,1 @@
+aws eks describe-cluster --name my-cluster --query "cluster.endpoint" --region us-east-1 --output text
