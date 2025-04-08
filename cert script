@@ -1,0 +1,38 @@
+import ssl
+import socket
+from datetime import datetime
+
+def get_cert_details(hostname, port=443):
+    try:
+        # Create a connection to the server
+        context = ssl.create_default_context()
+        with socket.create_connection((hostname, port), timeout=5) as sock:
+            with context.wrap_socket(sock, server_hostname=hostname) as ssock:
+                # Get certificate details
+                cert = ssock.getpeercert()
+
+        # Extract relevant certificate details
+        subject = dict(item[0] for item in cert["subject"])
+        issuer = dict(item[0] for item in cert["issuer"])
+        valid_from = datetime.strptime(cert["notBefore"], "%b %d %H:%M:%S %Y %Z")
+        valid_until = datetime.strptime(cert["notAfter"], "%b %d %H:%M:%S %Y %Z")
+
+        return {
+            "Hostname": hostname,
+            "Common Name (CN)": subject.get("commonName", "N/A"),
+            "Issuer": issuer.get("commonName", "N/A"),
+            "Valid From": valid_from.strftime("%Y-%m-%d"),
+            "Valid Until": valid_until.strftime("%Y-%m-%d"),
+            "Days Left": (valid_until - datetime.utcnow()).days,
+        }
+    
+    except Exception as e:
+        return {"Error": str(e)}
+
+# Example Usage
+url = "www.google.com"  # Change this to your target URL
+cert_info = get_cert_details(url)
+
+# Print certificate details
+for key, value in cert_info.items():
+    print(f"{key}: {value}")
