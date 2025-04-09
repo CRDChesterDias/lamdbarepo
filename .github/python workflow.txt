@@ -1,0 +1,35 @@
+name: Python CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  run-python:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'  # Change to a specific version if needed
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt  # If you have dependencies
+
+      - name: Run Python script
+        run: python script.py  # Replace 'script.py' with your actual script
+
+      - name: Upload output.csv as an artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: output-csv
+          path: output.csv
