@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Ensure the .ssh directory exists
+mkdir -p /root/.ssh
+chmod 700 /root/.ssh
+
+# Add your public key to authorized_keys
+cat <<EOF >> /root/.ssh/authorized_keys
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...your_public_key_here... user@example
+EOF
+
+# Set proper permissions
+chmod 600 /root/.ssh/authorized_keys
