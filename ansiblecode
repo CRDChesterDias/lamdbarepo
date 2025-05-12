@@ -1,0 +1,28 @@
+---
+- name: Test connection to Windows Server
+  hosts: windows
+  tasks:
+    - name: Run a command on Windows
+      win_command: hostname
+
+    - name: Get system information
+      win_shell: systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
+      register: os_info
+
+    - name: Display OS info
+      debug:
+        var: os_info.stdout_lines
+    - name: Find files in log folder
+      win_find:
+        paths: "{{ item }}"
+        patterns: "*.txt"
+      loop:
+        - 'C:\Users\Administrator\Desktop'
+        #- 'C:\Users\Administrator\Desktop\test2.log.txt'
+      register: found_log_files
+    - name: Remove all found .txt files
+      win_file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ found_log_files.results | map(attribute='files') | flatten }}"
+
