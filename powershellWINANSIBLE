@@ -1,0 +1,22 @@
+ # Enable WinRM listener
+winrm quickconfig -force
+
+# Allow Basic authentication
+winrm set winrm/config/service/auth "Basic=true"
+
+# Allow unencrypted traffic (HTTP - for lab/testing)
+winrm set winrm/config/service "AllowUnencrypted=true"
+
+# Enable the WinRM service to start automatically
+Set-Service -Name WinRM -StartupType Automatic
+
+# Start the WinRM service
+Start-Service -Name WinRM
+
+# Confirm listener is active
+winrm enumerate winrm/config/listener 
+
+
+New-NetFirewallRule -Name "WinRM_HTTP" -DisplayName "WinRM over HTTP" -Protocol TCP -LocalPort 5985 -Action Allow -Direction Inbound
+
+
