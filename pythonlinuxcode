@@ -1,0 +1,47 @@
+import paramiko
+
+def fetch_multiple_files(hostname, port, username, password, remote_file_paths):
+    file_contents = {}
+
+    try:
+        # Set up SSH and SFTP
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname, port=port, username=username, password=password)
+
+        sftp = ssh.open_sftp()
+
+        # Iterate through each file
+        for path in remote_file_paths:
+            try:
+                with sftp.file(path, mode='r') as remote_file:
+                    contents = remote_file.read().decode('utf-8')
+                    file_contents[path] = contents
+                    print(contents)
+            except Exception as file_error:
+                file_contents[path] = f"Error reading file: {str(file_error)}"
+
+        sftp.close()
+        ssh.close()
+
+    except Exception as e:
+        return f"Connection error: {str(e)}"
+
+    return file_contents
+
+# Example usage
+if __name__ == "__main__":
+    hostname = 'ec2-54-159-180-191.compute-1.amazonaws.com'
+    port = 22
+    username = 'johndoe'
+    password = 'NewPassword123@'
+    
+    remote_file_paths = [
+        '/home/johndoe/content.txt',
+    ]
+
+    contents = fetch_multiple_files(hostname, port, username, password, remote_file_paths)
+
+    for path, content in contents.items():
+        print(f"\n--- {path} ---")
+        print(content)
