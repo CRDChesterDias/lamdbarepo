@@ -3,20 +3,31 @@ import pandas as pd
 # File names
 file_a = 'file_a.xlsx'
 file_b = 'file_b.xlsx'
-status_column = 'Status'
 
-# 🔧 Define which columns to match per sheet
-common_columns_per_sheet = {
-    'Employees': ['Name', 'Email'],
-    'Students': ['ID'],
-    'Clients': ['ClientID', 'Email'],
-    # Add other sheets as needed
+# 🛠 Sheet-specific configuration
+sheet_config = {
+    'Employees': {
+        'common_columns': ['Name', 'Email'],
+        'status_column': 'Status',
+        'status_value': 'to remove'
+    },
+    'Students': {
+        'common_columns': ['ID'],
+        'status_column': 'Flag',
+        'status_value': 'exclude'
+    },
+    'Clients': {
+        'common_columns': ['ClientID', 'Email'],
+        'status_column': 'Action',
+        'status_value': 'remove'
+    },
+    # Add more sheets as needed
 }
 
-# Prepare the output
+# Dictionary to hold filtered data
 output_data = {}
 
-for sheet, common_columns in common_columns_per_sheet.items():
+for sheet, config in sheet_config.items():
     try:
         df_a = pd.read_excel(file_a, sheet_name=sheet)
         df_b = pd.read_excel(file_b, sheet_name=sheet)
@@ -25,32 +36,33 @@ for sheet, common_columns in common_columns_per_sheet.items():
             output_data[sheet] = df_a
             continue
 
-        # Skip if Status column is missing in file_b
+        # Get custom settings for this sheet
+        common_columns = config['common_columns']
+        status_column = config['status_column']
+        status_value = config['status_value'].strip().lower()
+
+        # Validate status column
         if status_column not in df_b.columns:
-            print(f"⚠️ Sheet '{sheet}': Status column not found in file_b. Skipping removal.")
+            print(f"⚠️ Sheet '{sheet}': '{status_column}' column not found in file_b.")
             output_data[sheet] = df_a
             continue
 
-        # Filter rows in file_b where Status == "to remove"
-        df_b_filtered = df_b[df_b[status_column].astype(str).str.strip().str.lower() == 'to remove']
+        # Filter rows from file_b where status_column matches status_value
+        df_b_filtered = df_b[
+            df_b[status_column].astype(str).str.strip().str.lower() == status_value
+        ]
 
-        # Ensure all common columns exist in both dataframes
+        # Check that all matching columns exist
         missing_in_a = [col for col in common_columns if col not in df_a.columns]
         missing_in_b = [col for col in common_columns if col not in df_b_filtered.columns]
 
         if missing_in_a or missing_in_b:
-            print(f"⚠️ Sheet '{sheet}': Missing columns in A: {missing_in_a}, or in B: {missing_in_b}")
+            print(f"⚠️ Sheet '{sheet}': Missing columns — in A: {missing_in_a}, in B: {missing_in_b}")
             output_data[sheet] = df_a
             continue
 
-        # Perform anti-join to exclude only rows that match "to remove"
-        merged = pd.merge(
-            df_a,
-            df_b_filtered[common_columns],
-            on=common_columns,
-            how='left',
-            indicator=True
-        )
+        # Merge and remove rows that match (status condition already filtered)
+        merged = pd.merge(df_a, df_b_filtered[common_columns], on=common_columns, how='left', indicator=True)
         filtered = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
 
         output_data[sheet] = filtered
@@ -59,9 +71,9 @@ for sheet, common_columns in common_columns_per_sheet.items():
         print(f"❌ Error processing sheet '{sheet}': {e}")
         continue
 
-# 🔽 Save the cleaned data
+# Save final result
 with pd.ExcelWriter('filtered_output.xlsx') as writer:
     for sheet_name, df in output_data.items():
         df.to_excel(writer, sheet_name=sheet_name, index=False)
 
-print("✅ Done! Filtered rows removed only when Status == 'to remove'. File saved as 'filtered_output.xlsx'")
+print("✅ Success! Rows removed per sheet-specific status conditions. Output saved as 'filtered_output.xlsx'")
