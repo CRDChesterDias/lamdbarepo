@@ -1,0 +1,67 @@
+import pandas as pd
+
+# File names
+file_a = 'file_a.xlsx'
+file_b = 'file_b.xlsx'
+status_column = 'Status'
+
+# 🔧 Define which columns to match per sheet
+common_columns_per_sheet = {
+    'Employees': ['Name', 'Email'],
+    'Students': ['ID'],
+    'Clients': ['ClientID', 'Email'],
+    # Add other sheets as needed
+}
+
+# Prepare the output
+output_data = {}
+
+for sheet, common_columns in common_columns_per_sheet.items():
+    try:
+        df_a = pd.read_excel(file_a, sheet_name=sheet)
+        df_b = pd.read_excel(file_b, sheet_name=sheet)
+
+        if df_a.empty:
+            output_data[sheet] = df_a
+            continue
+
+        # Skip if Status column is missing in file_b
+        if status_column not in df_b.columns:
+            print(f"⚠️ Sheet '{sheet}': Status column not found in file_b. Skipping removal.")
+            output_data[sheet] = df_a
+            continue
+
+        # Filter rows in file_b where Status == "to remove"
+        df_b_filtered = df_b[df_b[status_column].astype(str).str.strip().str.lower() == 'to remove']
+
+        # Ensure all common columns exist in both dataframes
+        missing_in_a = [col for col in common_columns if col not in df_a.columns]
+        missing_in_b = [col for col in common_columns if col not in df_b_filtered.columns]
+
+        if missing_in_a or missing_in_b:
+            print(f"⚠️ Sheet '{sheet}': Missing columns in A: {missing_in_a}, or in B: {missing_in_b}")
+            output_data[sheet] = df_a
+            continue
+
+        # Perform anti-join to exclude only rows that match "to remove"
+        merged = pd.merge(
+            df_a,
+            df_b_filtered[common_columns],
+            on=common_columns,
+            how='left',
+            indicator=True
+        )
+        filtered = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
+
+        output_data[sheet] = filtered
+
+    except Exception as e:
+        print(f"❌ Error processing sheet '{sheet}': {e}")
+        continue
+
+# 🔽 Save the cleaned data
+with pd.ExcelWriter('filtered_output.xlsx') as writer:
+    for sheet_name, df in output_data.items():
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+print("✅ Done! Filtered rows removed only when Status == 'to remove'. File saved as 'filtered_output.xlsx'")
