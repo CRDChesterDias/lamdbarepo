@@ -1,0 +1,27 @@
+import requests
+from requests.auth import HTTPBasicAuth
+
+# Configuration
+instance = 'your_instance'  # e.g., 'dev12345'
+username = 'your_username'
+password = 'your_password'
+
+# API endpoint to test (fetching 1 incident as an example)
+url = f'https://{instance}.service-now.com/api/now/table/incident?sysparm_limit=1'
+
+# Headers
+headers = {
+    "Accept": "application/json"
+}
+
+# Make the request
+response = requests.get(url, auth=HTTPBasicAuth(username, password), headers=headers)
+
+# Output result
+if response.status_code == 200:
+    print("✅ Successfully connected to ServiceNow.")
+    print("Sample Response:")
+    print(response.json())
+else:
+    print(f"❌ Failed to connect. Status code: {response.status_code}")
+    print("Response:", response.text)
