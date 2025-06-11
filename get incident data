@@ -1,0 +1,76 @@
+import requests
+import csv
+from datetime import datetime
+
+# 🔐 ServiceNow Credentials
+INSTANCE = 'your_instance'  # e.g., 'dev12345'
+USERNAME = 'your_username'
+PASSWORD = 'your_password'
+
+# 🌐 API Endpoints
+BASE_URL = f'https://{INSTANCE}.service-now.com'
+INCIDENT_API = f'{BASE_URL}/api/now/table/incident'
+AUDIT_API = f'{BASE_URL}/api/now/table/sys_audit'
+
+# 📅 Filter Date
+DATE_FILTER = '2024-05-01'  # Format YYYY-MM-DD
+
+# 🧾 Headers
+HEADERS = {
+    'Accept': 'application/json'
+}
+
+# Step 1: Get incidents created after DATE_FILTER with reassignment_count > 4
+params = {
+    'sysparm_query': f'opened_at>=javascript:gs.dateGenerate("{DATE_FILTER}","00:00:00")^reassignment_count>4',
+    'sysparm_fields': 'number,sys_id',
+    'sysparm_limit': '1000'
+}
+
+response = requests.get(INCIDENT_API, auth=(USERNAME, PASSWORD), headers=HEADERS, params=params)
+response.raise_for_status()
+incidents = response.json()['result']
+
+# Output format: { incident_number: [(assignment_group, date), ...] }
+output_data = []
+
+for incident in incidents:
+    incident_id = incident['sys_id']
+    incident_number = incident['number']
+
+    # Step 2: Fetch assignment group changes from sys_audit
+    audit_query = {
+        'sysparm_query': f'documentkey={incident_id}^fieldname=assignment_group',
+        'sysparm_fields': 'newvalue,sys_created_on',
+        'sysparm_limit': '100'
+    }
+
+    audit_response = requests.get(AUDIT_API, auth=(USERNAME, PASSWORD), headers=HEADERS, params=audit_query)
+    audit_response.raise_for_status()
+    audit_logs = audit_response.json()['result']
+
+    # Parse group names and assignment dates
+    assignments = []
+    for log in audit_logs:
+        group_id = log['newvalue']
+        date = log['sys_created_on']
+
+        # Optional: Resolve group name if needed
+        group_name = group_id  # default to sys_id
+        if group_id:
+            group_resp = requests.get(f"{BASE_URL}/api/now/table/sys_user_group/{group_id}", auth=(USERNAME, PASSWORD), headers=HEADERS)
+            if group_resp.status_code == 200:
+                group_name = group_resp.json().get('result', {}).get('name', group_id)
+
+        assignments.append(f"{group_name}({date})")
+
+    output_data.append([incident_number] + assignments)
+
+# Step 3: Write to CSV
+with open('incident_assignments.csv', 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['Incident Number', 'Assignment History'])
+    for row in output_data:
+        writer.writerow([row[0]] + row[1:])
+
+print("✅ CSV export completed as 'incident_assignments.csv'")
