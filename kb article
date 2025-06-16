@@ -1,0 +1,35 @@
+import requests
+from requests.auth import HTTPBasicAuth
+
+# === Configuration ===
+INSTANCE = 'your_instance'  # e.g., dev12345
+USERNAME = 'your_username'
+PASSWORD = 'your_password'
+TOP_N = 10  # Number of top articles to fetch
+
+# === API Endpoint ===
+url = f"https://{INSTANCE}.service-now.com/api/now/table/kb_knowledge"
+
+# === Query Parameters ===
+params = {
+    'sysparm_query': 'active=true^ORDERBYDESC=view_count',  # active articles, sorted by view_count
+    'sysparm_limit': TOP_N,
+    'sysparm_fields': 'number,short_description,view_count,sys_created_on'
+}
+
+# === API Call ===
+response = requests.get(
+    url,
+    auth=HTTPBasicAuth(USERNAME, PASSWORD),
+    headers={"Accept": "application/json"},
+    params=params
+)
+
+# === Result Handling ===
+if response.status_code == 200:
+    data = response.json().get('result', [])
+    for article in data:
+        print(f"Number: {article['number']}, Views: {article.get('view_count')}, Title: {article['short_description']}")
+else:
+    print(f"Failed to retrieve articles: {response.status_code}")
+    print(response.text)
