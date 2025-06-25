@@ -15,13 +15,33 @@ HEADERS = {
     "Accept": "application/json"
 }
 
-# ==== FILTER: Today + Opened By "Tim" + 2 Locations ====
-today = datetime.datetime.utcnow().date().isoformat()
+# ==== DATE FILTER (UTC today) ====
+today = datetime.datetime.utcnow().date()
+start_time = f"{today} 00:00:00"
+end_time = f"{today + datetime.timedelta(days=1)} 00:00:00"
+
+# ==== QUERY: Remove location filter ====
 query = (
     f"opened_by.nameLIKE{USER_NAME}^"
-    f"sys_created_onON{today}^"
-    f"location.nameIN{','.join(LOCATIONS)}"
+    f"opened_at>={start_time}^"
+    f"opened_at<{end_time}"
 )
+
+# ==== FIELDS TO FETCH ====
+fields = [
+    "number",
+    "short_description",
+    "description",
+    "cmdb_ci",
+    "subcategory",
+    "priority",
+    "impact",
+    "urgency",
+    "assignment_group",
+    "state",
+    "opened_at",
+    "opened_by"
+]
 
 # ==== FETCH INCIDENTS ====
 print("[*] Fetching incident data...")
@@ -29,14 +49,19 @@ response = requests.get(
     BASE_URL,
     auth=(USERNAME, PASSWORD),
     headers=HEADERS,
-    params={"sysparm_query": query, "sysparm_limit": 1000}
+    params={
+        "sysparm_query": query,
+        "sysparm_fields": ",".join(fields),
+        "sysparm_limit": 1000,
+        "sysparm_display_value": "true"
+    }
 )
 
 if response.status_code != 200:
     print(f"[!] Error: {response.status_code} - {response.text}")
     exit()
 
-incidents = response.json()["result"]
+incidents = response.json().get("result", [])
 
 if not incidents:
     print("[!] No incidents found.")
@@ -44,22 +69,26 @@ if not incidents:
 
 print(f"[+] Retrieved {len(incidents)} incident(s)")
 
-# ==== CREATE EXCEL FILE ====
+# ==== WRITE TO EXCEL ====
 wb = openpyxl.Workbook()
 ws = wb.active
 ws.title = "Incidents"
 
-# Write header
-headers = list(incidents[0].keys())
-ws.append(headers)
+# Write header row
+ws.append(fields)
 
-# Write data
-for record in incidents:
-    row = [record.get(key, "") for key in headers]
+# Helper to extract readable values
+def clean(value):
+    if isinstance(value, dict):
+        return value.get("display_value") or value.get("value") or ""
+    return str(value)
+
+# Write each row of data
+for incident in incidents:
+    row = [clean(incident.get(field, "")) for field in fields]
     ws.append(row)
 
-# Save to file
-filename = f"incidents_{today}.xlsx"
+# Save the file
+filename = f"incidents_opened_{today}.xlsx"
 wb.save(filename)
-
 print(f"[✓] Data saved to {filename}")
