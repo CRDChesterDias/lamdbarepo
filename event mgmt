@@ -1,0 +1,57 @@
+import requests
+import datetime
+
+# ==== CONFIGURATION ====
+SN_INSTANCE = "your_instance"         # e.g., dev12345
+USERNAME = "your_username"
+PASSWORD = "your_password"
+
+BASE_URL = f"https://{SN_INSTANCE}.service-now.com/api/now/table/em_event"
+HEADERS = {
+    "Accept": "application/json"
+}
+
+# ==== DATE RANGE: Today (UTC) ====
+today = datetime.datetime.utcnow().date()
+start_time = f"{today} 00:00:00"
+end_time = f"{today + datetime.timedelta(days=1)} 00:00:00"
+
+# ==== QUERY: Events occurred today ====
+query = f"time_of_event>={start_time}^time_of_event<{end_time}"
+
+# ==== FETCH EVENTS ====
+print("[*] Fetching today's events from em_event table...")
+
+response = requests.get(
+    BASE_URL,
+    auth=(USERNAME, PASSWORD),
+    headers=HEADERS,
+    params={
+        "sysparm_query": query,
+        "sysparm_limit": 1000,
+        "sysparm_display_value": "true"
+    }
+)
+
+if response.status_code != 200:
+    print(f"[!] Error {response.status_code}: {response.text}")
+    exit()
+
+events = response.json().get("result", [])
+
+if not events:
+    print("[!] No events found for today.")
+    exit()
+
+print(f"[+] Found {len(events)} event(s) for today:\n")
+
+# ==== PRINT EACH EVENT ====
+for i, event in enumerate(events, start=1):
+    print(f"--- Event {i} ---")
+    for key, value in event.items():
+        # Print only display values when available
+        if isinstance(value, dict):
+            print(f"{key}: {value.get('display_value') or value.get('value')}")
+        else:
+            print(f"{key}: {value}")
+    print()
