@@ -1,0 +1,77 @@
+import pandas as pd
+from fuzzywuzzy import fuzz
+from openpyxl import Workbook
+
+# ==== CONFIGURATION ====
+FILE1 = "incidents_file1.xlsx"
+FILE2 = "incidents_file2.xlsx"
+MATCH_THRESHOLD = 90  # 90% similarity for descriptions
+
+# ==== LOAD FILES ====
+df1 = pd.read_excel(FILE1)
+df2 = pd.read_excel(FILE2)
+
+# ==== RESULTS STORAGE ====
+results = []
+
+# ==== NORMALIZE STRING ====
+def normalize(text):
+    if pd.isna(text):
+        return ""
+    return str(text).strip().lower()
+
+# ==== COMPARE EACH INCIDENT IN FILE1 TO FILE2 ====
+for idx1, row1 in df1.iterrows():
+    cmdb1 = normalize(row1['cmdb_ci'])
+    desc1 = normalize(row1['description'])
+    short1 = normalize(row1['short_description'])
+    
+    matched = False
+
+    for idx2, row2 in df2.iterrows():
+        cmdb2 = normalize(row2['cmdb_ci'])
+        desc2 = normalize(row2['description'])
+        short2 = normalize(row2['short_description'])
+
+        if cmdb1 == cmdb2:
+            # Fuzzy match descriptions
+            desc_score = fuzz.token_set_ratio(desc1, desc2)
+            short_score = fuzz.token_set_ratio(short1, short2)
+
+            if desc_score >= MATCH_THRESHOLD and short_score >= MATCH_THRESHOLD:
+                matched = True
+                result = {
+                    "File1 Number": row1['number'],
+                    "File2 Number": row2['number'],
+                    "CMDB CI": cmdb1,
+                    "Short Desc Match (%)": short_score,
+                    "Description Match (%)": desc_score,
+                }
+
+                # Compare other attributes
+                for field in ['priority', 'impact', 'urgency', 'assignment_group', 'state']:
+                    result[f"{field} match"] = (
+                        normalize(row1.get(field)) == normalize(row2.get(field))
+                    )
+                results.append(result)
+                break  # Stop after first good match
+
+    if not matched:
+        results.append({
+            "File1 Number": row1['number'],
+            "File2 Number": "No match",
+            "CMDB CI": cmdb1,
+            "Short Desc Match (%)": 0,
+            "Description Match (%)": 0,
+            "priority match": False,
+            "impact match": False,
+            "urgency match": False,
+            "assignment_group match": False,
+            "state match": False
+        })
+
+# ==== EXPORT TO EXCEL ====
+output_df = pd.DataFrame(results)
+output_file = "incident_comparison_report.xlsx"
+output_df.to_excel(output_file, index=False)
+print(f"[✓] Comparison report saved to {output_file}")
