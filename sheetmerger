@@ -1,0 +1,22 @@
+import pandas as pd
+
+# Input Excel files
+file1 = "file1.xlsx"
+file2 = "file2.xlsx"
+
+# Output merged file
+output_file = "merged_output.xlsx"
+
+# Create an ExcelWriter to write combined sheets
+with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+    # Load all sheets from file1
+    xl1 = pd.read_excel(file1, sheet_name=None)
+    for sheet_name, df in xl1.items():
+        df.to_excel(writer, sheet_name=f"{sheet_name}_1", index=False)
+
+    # Load all sheets from file2
+    xl2 = pd.read_excel(file2, sheet_name=None)
+    for sheet_name, df in xl2.items():
+        df.to_excel(writer, sheet_name=f"{sheet_name}_2", index=False)
+
+print(f"All sheets from {file1} and {file2} merged into {output_file}")
