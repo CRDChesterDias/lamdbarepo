@@ -1,49 +1,57 @@
-import pandas as pd
-from openpyxl import load_workbook
-from openpyxl.utils import get_column_letter
-
-filename = "your_excel_file.xlsx"
-wb = load_workbook(filename)
-sheet_pattern = "AAA_TO_BBB"
+import openpyxl
 
 def normalize(text):
     return str(text).strip().lower() if text else ""
 
-for sheet_name in wb.sheetnames:
-    if not sheet_name.startswith(sheet_pattern):
-        continue
+def process_excel(file_path):
+    wb = openpyxl.load_workbook(file_path)
+    
+    for sheet_name in wb.sheetnames:
+        if not sheet_name.startswith("AAA_TO_BBB"):
+            continue
 
-    ws = wb[sheet_name]
-    headers = [cell.value for cell in next(ws.iter_rows(min_row=1, max_row=1))]
-    col_idx = {str(h).strip().lower(): i for i, h in enumerate(headers)}
+        ws = wb[sheet_name]
+        headers = [cell.value for cell in ws[1]]
 
-    # Create or get 'Match Status' column
-    if 'match status' not in col_idx:
-        match_col_letter = get_column_letter(len(headers) + 1)
-        ws[f"{match_col_letter}1"] = "Match Status"
-        match_col_idx = len(headers)
-    else:
-        match_col_idx = col_idx['match status']
+        # Get column indexes
+        col_index = {header: idx for idx, header in enumerate(headers)}
 
-    aaa_rows = []
-    bbb_map = {}
+        required_cols = ["Source", "short desc", "Comments"]
+        if not all(col in col_index for col in required_cols):
+            print(f"Missing required columns in {sheet_name}")
+            continue
 
-    for row in ws.iter_rows(min_row=2):
-        source = normalize(row[col_idx['source']].value)
-        short_desc = normalize(row[col_idx['short desc']].value)
-        comment_cell = row[col_idx['comments']]
+        match_status_col = len(headers)
+        if "Match_Status" not in headers:
+            ws.cell(row=1, column=match_status_col + 1).value = "Match_Status"
 
-        if source == 'bbb':
-            bbb_map[short_desc] = comment_cell.value
-        elif source == 'aaa':
-            aaa_rows.append((row, short_desc, comment_cell))
+        # Separate rows by Source
+        aaa_rows = []
+        bbb_rows = []
 
-    for row, short_desc, comment_cell in aaa_rows:
-        match_value = bbb_map.get(short_desc)
-        if match_value is not None:
-            comment_cell.value = match_value
-            row[match_col_idx].value = "Matched"
-        else:
-            row[match_col_idx].value = "Not Matched"
+        for row_idx in range(2, ws.max_row + 1):
+            row = [ws.cell(row=row_idx, column=i+1).value for i in range(len(headers))]
+            if normalize(row[col_index["Source"]]) == "aaa":
+                aaa_rows.append((row_idx, row))
+            elif normalize(row[col_index["Source"]]) == "bbb":
+                bbb_rows.append((row_idx, row))
 
-wb.save("updated_" + filename)
+        # Match BBB short desc with AAA
+        for bbb_idx, bbb_row in bbb_rows:
+            bbb_short = normalize(bbb_row[col_index["short desc"]])
+            matched = False
+
+            for _, aaa_row in aaa_rows:
+                aaa_short = normalize(aaa_row[col_index["short desc"]])
+                if bbb_short == aaa_short:
+                    # Copy Comments from AAA to BBB
+                    ws.cell(row=bbb_idx, column=col_index["Comments"]+1).value = aaa_row[col_index["Comments"]]
+                    matched = True
+                    break
+
+            # Write match status
+            status = "Matched" if matched else "Not Matched"
+            ws.cell(row=bbb_idx, column=match_status_col + 1).value = status
+
+    wb.save(file_path)
+    print(f"✅ Completed processing and saved: {file_path}")
