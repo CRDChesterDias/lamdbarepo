@@ -1,16 +1,19 @@
- else:
-                    orig_row = min(r_idx + 1, original_ws.max_row)
-                    orig_col = min(c_idx, original_ws.max_column)
-                    if original_ws.cell(row=orig_row, column=orig_col).has_style:
-                        ws.cell(row=r_idx, column=c_idx)._style = copy(original_ws.cell(row=orig_row, column=orig_col)._style)
+def write_df_with_styles(ws, df, original_ws):
+        orig_max_col = original_ws.max_column
+        orig_max_row = original_ws.max_row
 
-    # Step 6: Add II_with_matches
-    ws_ii = new_wb.create_sheet("II_with_matches")
-    write_df_with_styles(ws_ii, ii_data, source_ws)
-
-    # Step 7: Add Remaining_EM
-    ws_em = new_wb.create_sheet("Remaining_EM")
-    write_df_with_styles(ws_em, em_data, source_ws)
-
-    # Step 8: Save
-    new_wb.save("ABCAEDEA_processed.xlsx")
+        for r_idx, row in enumerate(dataframe_to_rows(df, index=False, header=True), 1):
+            ws.append(row)
+            for c_idx, _ in enumerate(row, 1):
+                # Apply header style from first row
+                if r_idx == 1 and c_idx <= orig_max_col:
+                    source_cell = original_ws.cell(row=1, column=c_idx)
+                    if source_cell.has_style:
+                        ws.cell(row=r_idx, column=c_idx)._style = copy(source_cell._style)
+                elif r_idx > 1:
+                    # Try to match row/col style from source if within bounds
+                    src_row = min(r_idx + 1, orig_max_row)
+                    src_col = min(c_idx, orig_max_col)
+                    source_cell = original_ws.cell(row=src_row, column=src_col)
+                    if source_cell.has_style:
+                        ws.cell(row=r_idx, column=c_idx)._style = copy(source_cell._style)
