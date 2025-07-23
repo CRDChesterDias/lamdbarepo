@@ -1,19 +1,17 @@
-def write_df_with_styles(ws, df, original_ws):
-        orig_max_col = original_ws.max_column
-        orig_max_row = original_ws.max_row
+def append_df_to_excel(filename, df, sheet_name):
+    if not os.path.exists(filename):
+        # File doesn't exist, create new workbook
+        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+    else:
+        # Append to existing sheet
+        book = load_workbook(filename)
+        if sheet_name in book.sheetnames:
+            startrow = book[sheet_name].max_row
+        else:
+            startrow = 0
 
-        for r_idx, row in enumerate(dataframe_to_rows(df, index=False, header=True), 1):
-            ws.append(row)
-            for c_idx, _ in enumerate(row, 1):
-                # Apply header style from first row
-                if r_idx == 1 and c_idx <= orig_max_col:
-                    source_cell = original_ws.cell(row=1, column=c_idx)
-                    if source_cell.has_style:
-                        ws.cell(row=r_idx, column=c_idx)._style = copy(source_cell._style)
-                elif r_idx > 1:
-                    # Try to match row/col style from source if within bounds
-                    src_row = min(r_idx + 1, orig_max_row)
-                    src_col = min(c_idx, orig_max_col)
-                    source_cell = original_ws.cell(row=src_row, column=src_col)
-                    if source_cell.has_style:
-                        ws.cell(row=r_idx, column=c_idx)._style = copy(source_cell._style)
+        with pd.ExcelWriter(filename, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+            writer.book = book
+            writer.sheets = {ws.title: ws for ws in book.worksheets}
+            df.to_excel(writer, sheet_name=sheet_name, index=False, header=startrow == 0, startrow=startrow)
