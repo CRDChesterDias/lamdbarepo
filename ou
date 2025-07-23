@@ -1,17 +1,17 @@
+
 def append_df_to_excel(filename, df, sheet_name):
     if not os.path.exists(filename):
-        # File doesn't exist, create new workbook
-        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
+        # Create file and write new sheet
+        df.to_excel(filename, sheet_name=sheet_name, index=False)
     else:
-        # Append to existing sheet
+        # Load workbook and find the last row in the sheet
         book = load_workbook(filename)
         if sheet_name in book.sheetnames:
-            startrow = book[sheet_name].max_row
+            sheet = book[sheet_name]
+            startrow = sheet.max_row
         else:
             startrow = 0
 
+        # Append data without resetting book
         with pd.ExcelWriter(filename, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
-            writer.book = book
-            writer.sheets = {ws.title: ws for ws in book.worksheets}
             df.to_excel(writer, sheet_name=sheet_name, index=False, header=startrow == 0, startrow=startrow)
