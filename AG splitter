@@ -7,7 +7,7 @@ def sanitize_sheet_name(name):
     invalid = ['\\', '/', '*', '[', ']', ':', '?']
     for ch in invalid:
         name = name.replace(ch, '')
-    return name[:31]
+    return name.strip()[:31] or "Unknown"
 
 def split_sheet_by_assignment_group(file_path):
     # Load the Excel file and the II_with_matches sheet
@@ -16,26 +16,16 @@ def split_sheet_by_assignment_group(file_path):
     # Group by Assignment group
     grouped = df.groupby("Assignment group")
 
-    # Load workbook for appending sheets
-    book = load_workbook(file_path)
-
-    # Remove old AG sheets if already there (optional safety)
-    for ag in grouped.groups.keys():
-        sheet_name = sanitize_sheet_name(str(ag))
-        if sheet_name in book.sheetnames:
-            del book[sheet_name]
-
-    # Write each group to a new sheet
-    with pd.ExcelWriter(file_path, engine="openpyxl", mode="a", if_sheet_exists='replace') as writer:
-        writer.book = book
+    # Write each group to a new sheet (appending to the same file)
+    with pd.ExcelWriter(file_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
         for ag, group_df in grouped:
             sheet_name = sanitize_sheet_name(str(ag))
             try:
                 group_df.to_excel(writer, sheet_name=sheet_name, index=False)
             except IllegalCharacterError:
-                print(f"⚠️ Skipping invalid sheet name: {ag}")
+                print(f"⚠️ Skipped invalid sheet name: {ag}")
 
-    print("✅ All Assignment Group sheets created successfully.")
+    print("✅ All Assignment Group sheets written successfully.")
 
 # Run the splitter
 split_sheet_by_assignment_group("ABCAEDEA_processed.xlsx")
