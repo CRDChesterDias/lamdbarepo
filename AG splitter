@@ -1,0 +1,41 @@
+import pandas as pd
+from openpyxl import load_workbook
+from openpyxl.utils.exceptions import IllegalCharacterError
+
+def sanitize_sheet_name(name):
+    # Excel sheet names must be <= 31 chars and cannot contain certain characters
+    invalid = ['\\', '/', '*', '[', ']', ':', '?']
+    for ch in invalid:
+        name = name.replace(ch, '')
+    return name[:31]
+
+def split_sheet_by_assignment_group(file_path):
+    # Load the Excel file and the II_with_matches sheet
+    df = pd.read_excel(file_path, sheet_name="II_with_matches")
+
+    # Group by Assignment group
+    grouped = df.groupby("Assignment group")
+
+    # Load workbook for appending sheets
+    book = load_workbook(file_path)
+
+    # Remove old AG sheets if already there (optional safety)
+    for ag in grouped.groups.keys():
+        sheet_name = sanitize_sheet_name(str(ag))
+        if sheet_name in book.sheetnames:
+            del book[sheet_name]
+
+    # Write each group to a new sheet
+    with pd.ExcelWriter(file_path, engine="openpyxl", mode="a", if_sheet_exists='replace') as writer:
+        writer.book = book
+        for ag, group_df in grouped:
+            sheet_name = sanitize_sheet_name(str(ag))
+            try:
+                group_df.to_excel(writer, sheet_name=sheet_name, index=False)
+            except IllegalCharacterError:
+                print(f"⚠️ Skipping invalid sheet name: {ag}")
+
+    print("✅ All Assignment Group sheets created successfully.")
+
+# Run the splitter
+split_sheet_by_assignment_group("ABCAEDEA_processed.xlsx")
