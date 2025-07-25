@@ -1,31 +1,24 @@
 import pandas as pd
-from openpyxl import load_workbook
-from openpyxl.utils.exceptions import IllegalCharacterError
 
-def sanitize_sheet_name(name):
-    # Excel sheet names must be <= 31 chars and cannot contain certain characters
-    invalid = ['\\', '/', '*', '[', ']', ':', '?']
-    for ch in invalid:
-        name = name.replace(ch, '')
-    return name.strip()[:31] or "Unknown"
+# Load the merged Excel file
+input_file = 'merged_II_and_EM.xlsx'
+ii_df = pd.read_excel(input_file, sheet_name='II DATA')
+em_df = pd.read_excel(input_file, sheet_name='EM DATA')
 
-def split_sheet_by_assignment_group(file_path):
-    # Load the Excel file and the II_with_matches sheet
-    df = pd.read_excel(file_path, sheet_name="II_with_matches")
+# Function to split dataframe into sheets by 'AG'
+def split_by_ag_and_write(writer, df, sheet_prefix):
+    if 'AG' not in df.columns:
+        print(f"❌ Column 'AG' not found in {sheet_prefix} sheet.")
+        return
+    
+    for ag_value, group in df.groupby('AG'):
+        sheet_name = f"{sheet_prefix}_{str(ag_value)[:25]}"  # Limit to 31 chars max
+        group.to_excel(writer, sheet_name=sheet_name, index=False)
 
-    # Group by Assignment group
-    grouped = df.groupby("Assignment group")
+# Write to new Excel file
+output_file = 'split_by_AG.xlsx'
+with pd.ExcelWriter(output_file) as writer:
+    split_by_ag_and_write(writer, ii_df, 'II')
+    split_by_ag_and_write(writer, em_df, 'EM')
 
-    # Write each group to a new sheet (appending to the same file)
-    with pd.ExcelWriter(file_path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-        for ag, group_df in grouped:
-            sheet_name = sanitize_sheet_name(str(ag))
-            try:
-                group_df.to_excel(writer, sheet_name=sheet_name, index=False)
-            except IllegalCharacterError:
-                print(f"⚠️ Skipped invalid sheet name: {ag}")
-
-    print("✅ All Assignment Group sheets written successfully.")
-
-# Run the splitter
-split_sheet_by_assignment_group("ABCAEDEA_processed.xlsx")
+print(f"✅ Done. Output saved to: {output_file}")
