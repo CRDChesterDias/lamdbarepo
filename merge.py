@@ -31,4 +31,7 @@ merged_em = pd.concat(em_data_list, ignore_index=True)
 
 # Save to new Excel with two sheets
 with pd.ExcelWriter('merged_II_and_EM.xlsx') as writer:
-    merged_ii.to_exc
+    merged_ii.to_excel(writer, sheet_name='II DATA', index=False)
+    merged_em.to_excel(writer, sheet_name='EM DATA', index=False)
+
+print("✅ Merge complete: 'merged_II_and_EM.xlsx' created.")
