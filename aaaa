@@ -1,2 +1,7 @@
+$cert = New-SelfSignedCertificate -DnsName "laptop.local" -CertStoreLocation "Cert:\LocalMachine\My"
+$thumb = $cert.Thumbprint
 New-WSManInstance -ResourceURI winrm/config/Listener -SelectorSet @{Address="*"; Transport="HTTPS"} `
  -ValueSet @{Hostname="laptop.local"; CertificateThumbprint=$thumb}
+Enable-WSManCredSSP -Role Server -Force
+Set-Item -Path WSMan:\localhost\Service\Auth\CredSSP -Value $true
+Enable-NetFirewallRule -Name "WINRM-HTTPS-In-TCP"
