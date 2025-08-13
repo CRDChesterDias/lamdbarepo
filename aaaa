@@ -1,6 +1,2 @@
-# Remove existing HTTPS listener if needed
-winrm delete winrm/config/Listener?Address=*+Transport=HTTPS
-
-# Create listener on all interfaces
-winrm create winrm/config/Listener?Address=*+Transport=HTTPS `
-"@{Hostname='laptop.local'; CertificateThumbprint='$Thumbprint'}"
+New-WSManInstance -ResourceURI winrm/config/Listener -SelectorSet @{Address="*"; Transport="HTTPS"} `
+ -ValueSet @{Hostname="laptop.local"; CertificateThumbprint=$thumb}
