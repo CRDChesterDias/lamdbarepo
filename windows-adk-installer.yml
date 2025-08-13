@@ -1,0 +1,88 @@
+---
+- name: Install Windows ADK (and optional WinPE add-on)
+  hosts: windows
+  gather_facts: no
+  vars:
+    # --- Set these to the current Microsoft download links you want to use ---
+    # Tip: keep them in group_vars or a vault and update for new ADK releases.
+    adk_download_url: "https://go.microsoft.com/fwlink/?linkid=<ADK_EXE_LATEST>"        # e.g., adksetup.exe
+    winpe_download_url: "https://go.microsoft.com/fwlink/?linkid=<WINPE_EXE_LATEST>"    # e.g., adkwinpesetup.exe
+
+    # Where to stage installers
+    adk_temp_dir: "C:\\Temp\\ADK"
+    adk_installer_path: "{{ adk_temp_dir }}\\adksetup.exe"
+    winpe_installer_path: "{{ adk_temp_dir }}\\adkwinpesetup.exe"
+
+    # Install WinPE add-on too?
+    install_winpe: true
+
+    # ADK features to install (OptionId.*). Common choices below:
+    # - OptionId.DeploymentTools (DISM, imaging tools)
+    # - OptionId.ImagingAndConfigurationDesigner (ICD)
+    # - OptionId.UserStateMigrationTool (USMT)
+    # - OptionId.WindowsPerformanceToolkit
+    # - OptionId.AppCompatibilityToolkit
+    adk_features:
+      - OptionId.DeploymentTools
+      - OptionId.UserStateMigrationTool
+
+  tasks:
+    - name: Ensure temp directory exists
+      ansible.windows.win_file:
+        path: "{{ adk_temp_dir }}"
+        state: directory
+
+    - name: Check if Windows 10/11 Kits root is present (detect ADK installed)
+      ansible.windows.win_reg_stat:
+        path: HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots
+        name: KitsRoot10
+      register: kits_root10
+
+    - name: Download ADK web installer
+      ansible.windows.win_get_url:
+        url: "{{ adk_download_url }}"
+        dest: "{{ adk_installer_path }}"
+      when: not kits_root10.exists
+
+    - name: Install Windows ADK silently with selected features
+      ansible.windows.win_package:
+        path: "{{ adk_installer_path }}"
+        arguments: "/quiet /norestart /ceip off /features {{ adk_features | join(' ') }}"
+        # Using a registry key for idempotency since adksetup.exe is a bootstrapper
+        creates_path: "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit"
+        state: present
+      register: adk_install
+      when: not kits_root10.exists
+
+    - name: Reboot if ADK requested it
+      ansible.windows.win_reboot:
+        msg: "Rebooting after Windows ADK installation"
+        pre_reboot_delay: 5
+      when: adk_install.reboot_required | default(false)
+
+    - name: Install WinPE add-on (optional) - download
+      ansible.windows.win_get_url:
+        url: "{{ winpe_download_url }}"
+        dest: "{{ winpe_installer_path }}"
+      when: install_winpe | bool
+
+    - name: Check if WinPE components already present
+      ansible.windows.win_stat:
+        path: "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Windows Preinstallation Environment"
+      register: winpe_stat
+      when: install_winpe | bool
+
+    - name: Install WinPE add-on silently
+      ansible.windows.win_package:
+        path: "{{ winpe_installer_path }}"
+        arguments: "/quiet /norestart /ceip off"
+        creates_path: "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Windows Preinstallation Environment"
+        state: present
+      register: winpe_install
+      when: install_winpe | bool and (not winpe_stat.stat.exists)
+
+    - name: Reboot if WinPE installer requested it
+      ansible.windows.win_reboot:
+        msg: "Rebooting after WinPE add-on installation"
+        pre_reboot_delay: 5
+      when: install_winpe | bool and (winpe_install.reboot_required | default(false))
