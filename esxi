@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+
+from pyVim.connect import SmartConnect, Disconnect
+from pyVmomi import vim
+import ssl
+
+def get_obj(content, vimtype, name=None):
+    """
+    Return an object by name, or all objects of a certain type
+    """
+    container = content.viewManager.CreateContainerView(content.rootFolder, vimtype, True)
+    if name:
+        for obj in container.view:
+            if obj.name == name:
+                return obj
+        return None
+    else:
+        return container.view
+
+
+def main():
+    # === Connection details ===
+    vcenter_ip = "your-vcenter-ip"
+    vcenter_user = "your-username"
+    vcenter_pwd = "your-password"
+
+    # Ignore SSL warnings (self-signed certs are common in vSphere)
+    context = ssl._create_unverified_context()
+
+    # Connect to vCenter
+    si = SmartConnect(host=vcenter_ip, user=vcenter_user, pwd=vcenter_pwd, sslContext=context)
+    content = si.RetrieveContent()
+
+    print("\n=== ESXi Hosts and their VMs with Startup Configurations ===\n")
+
+    # Get all ESXi hosts
+    hosts = get_obj(content, [vim.HostSystem])
+
+    for host in hosts:
+        print(f"\nHost: {host.name}")
+
+        # List VMs under this host
+        vms = host.vm
+        if not vms:
+            print("  No VMs found on this host.")
+        else:
+            print("  VMs:")
+            for vm in vms:
+                print(f"    - {vm.name}")
+
+        # Retrieve startup configuration
+        auto_start_manager = host.configManager.autoStartManager
+        if auto_start_manager and auto_start_manager.config:
+            print("  Startup Configurations:")
+            for auto_power_info in auto_start_manager.config.powerInfo:
+                vm_ref = auto_power_info.key
+                vm_name = vm_ref.name if vm_ref else "Unknown VM"
+                start_action = auto_power_info.startAction
+                start_delay = auto_power_info.startDelay
+                stop_action = auto_power_info.stopAction
+                stop_delay = auto_power_info.stopDelay
+                wait_for_heartbeat = auto_power_info.waitForHeartbeat
+
+                print(f"    VM: {vm_name}")
+                print(f"      Start Action: {start_action}")
+                print(f"      Start Delay: {start_delay} sec")
+                print(f"      Stop Action: {stop_action}")
+                print(f"      Stop Delay: {stop_delay} sec")
+                print(f"      Wait For Heartbeat: {wait_for_heartbeat}")
+        else:
+            print("  No startup configuration found.")
+
+    Disconnect(si)
+
+
+if __name__ == "__main__":
+    main()
