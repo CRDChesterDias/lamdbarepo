@@ -1,47 +1,64 @@
-import openpyxl
+#!/usr/bin/env python3
 
-def normalize(text):
-    return str(text).strip().lower()[:111] if text else ""
+from pyVim.connect import SmartConnect, Disconnect
+from pyVmomi import vim
+import ssl
+import csv
 
-def match_em_to_ii(file_path, output_path):
-    wb = openpyxl.load_workbook(file_path)
-    ws = wb["ABCAEDEA"]
+def get_all_hosts(content):
+    """Return a list of all ESXi hosts"""
+    container = content.viewManager.CreateContainerView(content.rootFolder, [vim.HostSystem], True)
+    return container.view
 
-    headers = [cell.value for cell in ws[1]]
-    col_index = {header: idx for idx, header in enumerate(headers)}
+def main():
+    # vCenter connection details
+    vcenter_ip = "your-vcenter-ip-or-host"
+    vcenter_user = "your-username"
+    vcenter_pwd = "your-password"
 
-    if "Source" not in col_index or "Short description" not in col_index:
-        print("❌ Required columns missing.")
-        return
+    # CSV file to store results
+    csv_file = "vm_startup_report.csv"
 
-    ii_rows = []
-    em_lookup = {}
+    # Ignore SSL for self-signed certificates
+    context = ssl._create_unverified_context()
 
-    # Split EM and II rows
-    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
-        source = str(row[col_index["Source"]].value).strip().upper()
-        short_desc = normalize(row[col_index["Short description"]].value)
-        row_values = [cell.value for cell in row]
+    # Connect to vCenter
+    si = SmartConnect(host=vcenter_ip, user=vcenter_user, pwd=vcenter_pwd, sslContext=context)
+    content = si.RetrieveContent()
 
-        if source == "EM":
-            em_lookup[short_desc] = row_values
-        elif source == "II":
-            ii_rows.append((row_values, short_desc))
+    # Open CSV file
+    with open(csv_file, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Host", "VM Name", "Startup Type"])
 
-    # Prepare headers for new sheet
-    em_headers = ["EM_" + h for h in headers]
-    new_headers = headers + em_headers
+        hosts = get_all_hosts(content)
 
-    # Create new workbook
-    new_wb = openpyxl.Workbook()
-    new_ws = new_wb.active
-    new_ws.title = "II_with_EM_matches"
-    new_ws.append(new_headers)
+        for host in hosts:
+            auto_start_manager = host.configManager.autoStartManager
 
-    for ii_row, short_key in ii_rows:
-        matched_em = em_lookup.get(short_key)
-        combined_row = ii_row + matched_em if matched_em else ii_row + [None]*len(headers)
-        new_ws.append(combined_row)
+            if not auto_start_manager or not auto_start_manager.config:
+                continue
 
-    new_wb.save(output_path)
-    print(f"✅ Saved matched output to: {output_path}")
+            power_info_list = auto_start_manager.config.powerInfo
+            if not power_info_list:
+                continue
+
+            for vm_info in power_info_list:
+                vm_ref = vm_info.key
+                vm_name = vm_ref.name if vm_ref else "Unknown VM"
+
+                # Determine startup type
+                start_action = vm_info.startAction
+                if start_action == "powerOn":
+                    startup_type = "Automatic"
+                else:
+                    startup_type = "Manual"
+
+                # Write row to CSV
+                writer.writerow([host.name, vm_name, startup_type])
+
+    print(f"VM startup report saved to {csv_file}")
+    Disconnect(si)
+
+if __name__ == "__main__":
+    main()
