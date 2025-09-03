@@ -11,3 +11,26 @@ New-NetFirewallRule -DisplayName "WinRM HTTPS" `
     -LocalPort 5986 `
     -Action Allow `
     -Profile Any
+
+
+
+import pandas as pd
+import glob
+import os
+
+# Path to your CSV files
+csv_files = glob.glob("path/to/csv/folder/*.csv")
+
+# Create a Pandas Excel writer using openpyxl
+output_file = "merged_output.xlsx"
+with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+    for file in csv_files:
+        # Extract filename without extension
+        base_name = os.path.basename(file).replace(".csv", "")
+        # Take only the part before the first '-'
+        sheet_name = base_name.split("-")[0][:31]  # Excel max sheet name = 31 chars
+        # Read and write CSV
+        df = pd.read_csv(file)
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+print(f"✅ All CSVs merged into {output_file}")
