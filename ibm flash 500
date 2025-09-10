@@ -1,0 +1,26 @@
+1. Authenticate
+
+Send a POST to get an auth token:
+
+curl -k -X POST "https://<flash500-ip>/REST/auth" \
+-H "Content-Type: application/json" \
+-d '{"username":"superuser","password":"yourpassword"}'
+
+
+The response will include an X-Auth-Token.
+
+2. Trigger Support Package Creation
+curl -k -X POST "https://<flash500-ip>/REST/systems/1/support_packages" \
+-H "Content-Type: application/json" \
+-H "X-Auth-Token: <your_token>" \
+-d '{"type":"full"}'
+
+
+type can be "full" or "minimal".
+
+Response includes an id for the support package.
+
+3. Download the Support Package
+curl -k -X GET "https://<flash500-ip>/REST/systems/1/support_packages/<package_id>/file" \
+-H "X-Auth-Token: <your_token>" \
+-o support_package.tgz
