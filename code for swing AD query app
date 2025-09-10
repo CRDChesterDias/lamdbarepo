@@ -1,0 +1,117 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import javax.naming.*;
+import javax.naming.directory.*;
+import java.util.Hashtable;
+import java.util.ArrayList;
+
+public class ADUserSearchApp {
+
+    private JFrame frame;
+    private JTextField emailField;
+    private JTextArea resultArea;
+    private JRadioButton groupsRadio;
+
+    // Update with your AD connection details
+    private final String LDAP_URL = "ldap://your-ad-server:389";
+    private final String LDAP_SEARCH_BASE = "DC=yourdomain,DC=com";
+    private final String LDAP_USER = "CN=YourServiceAccount,OU=Users,DC=yourdomain,DC=com";
+    private final String LDAP_PASSWORD = "your_password";
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new ADUserSearchApp().createUI());
+    }
+
+    private void createUI() {
+        frame = new JFrame("AD User Lookup");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(500, 400);
+        frame.setLayout(new BorderLayout());
+
+        JPanel topPanel = new JPanel(new FlowLayout());
+        topPanel.add(new JLabel("Email: "));
+        emailField = new JTextField(25);
+        topPanel.add(emailField);
+
+        groupsRadio = new JRadioButton("List all groups that user is part of");
+        topPanel.add(groupsRadio);
+
+        JButton searchBtn = new JButton("Search");
+        topPanel.add(searchBtn);
+
+        resultArea = new JTextArea();
+        resultArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(resultArea);
+
+        frame.add(topPanel, BorderLayout.NORTH);
+        frame.add(scrollPane, BorderLayout.CENTER);
+
+        searchBtn.addActionListener(e -> searchUser());
+
+        frame.setVisible(true);
+    }
+
+    private void searchUser() {
+        String email = emailField.getText().trim();
+        if (email.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "Please enter an email ID");
+            return;
+        }
+
+        try {
+            // Setup environment for authenticating against AD
+            Hashtable<String, String> env = new Hashtable<>();
+            env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
+            env.put(Context.PROVIDER_URL, LDAP_URL);
+            env.put(Context.SECURITY_AUTHENTICATION, "simple");
+            env.put(Context.SECURITY_PRINCIPAL, LDAP_USER);
+            env.put(Context.SECURITY_CREDENTIALS, LDAP_PASSWORD);
+
+            DirContext ctx = new InitialDirContext(env);
+
+            // Search filter for user by email
+            String searchFilter = "(mail=" + email + ")";
+            SearchControls sc = new SearchControls();
+            sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
+
+            NamingEnumeration<SearchResult> results = ctx.search(LDAP_SEARCH_BASE, searchFilter, sc);
+
+            resultArea.setText(""); // clear previous result
+
+            if (!results.hasMore()) {
+                resultArea.setText("No user found with email: " + email);
+                ctx.close();
+                return;
+            }
+
+            SearchResult sr = results.next();
+            Attributes attrs = sr.getAttributes();
+
+            String cn = (attrs.get("cn") != null) ? attrs.get("cn").get().toString() : "N/A";
+            String dn = sr.getNameInNamespace();
+
+            resultArea.append("User Found:\n");
+            resultArea.append("CN: " + cn + "\n");
+            resultArea.append("DN: " + dn + "\n");
+
+            if (groupsRadio.isSelected()) {
+                Attribute memberOf = attrs.get("memberOf");
+                if (memberOf != null) {
+                    resultArea.append("\nGroups:\n");
+                    for (int i = 0; i < memberOf.size(); i++) {
+                        resultArea.append(memberOf.get(i).toString() + "\n");
+                    }
+                } else {
+                    resultArea.append("\nNo group memberships found.\n");
+                }
+            }
+
+            ctx.close();
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            resultArea.setText("Error: " + ex.getMessage());
+        }
+    }
+}
