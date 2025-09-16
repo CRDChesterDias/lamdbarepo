@@ -1,0 +1,27 @@
+import requests
+
+flash_ip = "192.168.1.100"
+user = "admin"
+password = "yourpassword"
+
+# Step 1: Request package creation
+create_url = f"https://{flash_ip}/rest/v1/servicelog/download"
+resp = requests.post(create_url, auth=(user, password), verify=False)
+
+if resp.status_code == 200:
+    package_info = resp.json()
+    package_id = package_info.get("id")  # may vary depending on firmware version
+    print("Support package created, ID:", package_id)
+
+    # Step 2: Download package
+    download_url = f"{create_url}/{package_id}"
+    out_file = "support_package.tgz"
+
+    r = requests.get(download_url, auth=(user, password), verify=False, stream=True)
+    with open(out_file, "wb") as f:
+        for chunk in r.iter_content(chunk_size=8192):
+            f.write(chunk)
+
+    print("Support package saved as", out_file)
+else:
+    print("Error creating package:", resp.status_code, resp.text)
