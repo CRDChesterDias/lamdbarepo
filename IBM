@@ -25,3 +25,43 @@ if resp.status_code == 200:
     print("Support package saved as", out_file)
 else:
     print("Error creating package:", resp.status_code, resp.text)
+
+
+
+import requests
+
+flash_ip = "192.168.1.100"
+user = "admin"
+password = "yourpassword"
+
+# Step 1: Login and get token
+login_url = f"https://{flash_ip}/rest/auth"
+resp = requests.post(login_url, json={"username": user, "password": password}, verify=False)
+
+if resp.status_code == 200:
+    token = resp.json().get("token")
+    print("Got token:", token)
+else:
+    raise Exception(f"Login failed: {resp.status_code} {resp.text}")
+
+
+headers = {"Authorization": f"Bearer {token}"}
+create_url = f"https://{flash_ip}/rest/v1/servicelog/download"
+
+resp = requests.post(create_url, headers=headers, verify=False)
+if resp.status_code == 200:
+    package_info = resp.json()
+    package_id = package_info.get("id")
+    print("Support package created:", package_id)
+else:
+    print("Error creating package:", resp.status_code, resp.text)
+
+
+download_url = f"{create_url}/{package_id}"
+
+r = requests.get(download_url, headers=headers, verify=False, stream=True)
+with open("support_package.tgz", "wb") as f:
+    for chunk in r.iter_content(chunk_size=8192):
+        f.write(chunk)
+
+print("Support package downloaded")
