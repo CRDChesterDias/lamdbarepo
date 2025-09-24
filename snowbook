@@ -1,0 +1,79 @@
+(function execute(inputs, outputs) {
+    // ===== CONFIG =====
+    var gitlabHost = "https://gitlab.com";  // Change if self-hosted GitLab
+    var projectId = "123456";               // GitLab project ID
+    var triggerToken = "TRIGGER_TOKEN";     // GitLab trigger token
+    var branch = "main";                    // Git branch to run on
+    var personalAccessToken = "PERSONAL_ACCESS_TOKEN"; // GitLab PAT for read access
+    var pollIntervalMs = 5000;              // Wait 5s between polls
+    var maxRetries = 30;                    // Poll for up to 30 * 5s = 150s
+
+    // ===== Step 1: Trigger Pipeline =====
+    var r = new sn_ws.RESTMessageV2();
+    r.setEndpoint(gitlabHost + "/api/v4/projects/" + projectId + "/trigger/pipeline");
+    r.setHttpMethod("POST");
+    r.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    r.setStringParameterNoEscape("token", triggerToken);
+    r.setStringParameterNoEscape("ref", branch);
+
+    var response = r.execute();
+    var pipelineResp = JSON.parse(response.getBody());
+
+    if (!pipelineResp.id) {
+        outputs.error = "Failed to trigger pipeline: " + response.getBody();
+        return;
+    }
+
+    var pipelineId = pipelineResp.id;
+    gs.info("Triggered GitLab pipeline: " + pipelineId);
+
+    // ===== Step 2: Poll Pipeline Status =====
+    var status = "running";
+    var retries = 0;
+    while ((status === "running" || status === "pending") && retries < maxRetries) {
+        gs.sleep(pollIntervalMs);  // Wait before polling
+
+        var check = new sn_ws.RESTMessageV2();
+        check.setEndpoint(gitlabHost + "/api/v4/projects/" + projectId + "/pipelines/" + pipelineId);
+        check.setHttpMethod("GET");
+        check.setRequestHeader("PRIVATE-TOKEN", personalAccessToken);
+
+        var checkResp = check.execute();
+        var checkBody = JSON.parse(checkResp.getBody());
+        status = checkBody.status;
+        gs.info("Pipeline " + pipelineId + " status: " + status);
+
+        retries++;
+    }
+
+    if (status !== "success") {
+        outputs.error = "Pipeline did not succeed. Final status: " + status;
+        return;
+    }
+
+    // ===== Step 3: Get Job ID =====
+    var jobsReq = new sn_ws.RESTMessageV2();
+    jobsReq.setEndpoint(gitlabHost + "/api/v4/projects/" + projectId + "/pipelines/" + pipelineId + "/jobs");
+    jobsReq.setHttpMethod("GET");
+    jobsReq.setRequestHeader("PRIVATE-TOKEN", personalAccessToken);
+
+    var jobsResp = jobsReq.execute();
+    var jobs = JSON.parse(jobsResp.getBody());
+    var jobId = jobs[0].id;  // Assuming first job, or filter by job.name
+
+    gs.info("Found job ID: " + jobId);
+
+    // ===== Step 4: Download Artifact (output.txt) =====
+    var artifactReq = new sn_ws.RESTMessageV2();
+    artifactReq.setEndpoint(gitlabHost + "/api/v4/projects/" + projectId + "/jobs/" + jobId + "/artifacts/output.txt");
+    artifactReq.setHttpMethod("GET");
+    artifactReq.setRequestHeader("PRIVATE-TOKEN", personalAccessToken);
+
+    var artifactResp = artifactReq.execute();
+    var outputText = artifactResp.getBody();
+
+    outputs.pipeline_id = pipelineId;
+    outputs.job_id = jobId;
+    outputs.output_text = outputText;
+
+})(inputs, outputs);
