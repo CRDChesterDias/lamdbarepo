@@ -1,0 +1,9 @@
+response = Invoke-RestMethod `
+  -Uri "https://gitlab.com/api/v4/projects/<PROJECT_ID>/trigger/pipeline" `
+  -Method Post `
+  -Body @{
+    token = "<TRIGGER_TOKEN>"
+    ref   = "main"
+  }
+
+$response
