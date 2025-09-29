@@ -11,3 +11,7 @@ Get-ADGroupMember -Identity $groupDN -Recursive | Where-Object {$_.objectClass -
 
 
 Get-ADUser -Filter {Mail -eq "user@example.com"} -Properties Mail, SamAccountName, Name
+
+
+Get-ADUser -LDAPFilter "(&(objectClass=user)(memberOf=$groupDN))" -Properties mail, SamAccountName |
+    Select-Object Name, SamAccountName, Mail
