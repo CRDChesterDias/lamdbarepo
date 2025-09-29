@@ -1,0 +1,7 @@
+Get-ADGroup -LDAPFilter '(&(objectClass=group)(member=CN=John Doe,CN=Users,DC=example,DC=com))' | 
+    Select-Object Name, DistinguishedName
+Example: Find all users in a group
+powershell
+Copy code
+Get-ADUser -LDAPFilter '(&(objectClass=user)(memberOf=CN=Admins,OU=Groups,DC=example,DC=com))' | 
+    Select-Object SamAccountName, Name
