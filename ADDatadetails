@@ -8,3 +8,6 @@ Get-ADUser -LDAPFilter '(&(objectClass=user)(memberOf=CN=Admins,OU=Groups,DC=exa
 
 Get-ADGroupMember -Identity $groupDN -Recursive | Where-Object {$_.objectClass -eq "user"} | 
     Select-Object Name, SamAccountName
+
+
+Get-ADUser -Filter {Mail -eq "user@example.com"} -Properties Mail, SamAccountName, Name
