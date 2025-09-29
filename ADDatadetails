@@ -5,3 +5,6 @@ powershell
 Copy code
 Get-ADUser -LDAPFilter '(&(objectClass=user)(memberOf=CN=Admins,OU=Groups,DC=example,DC=com))' | 
     Select-Object SamAccountName, Name
+
+Get-ADGroupMember -Identity $groupDN -Recursive | Where-Object {$_.objectClass -eq "user"} | 
+    Select-Object Name, SamAccountName
