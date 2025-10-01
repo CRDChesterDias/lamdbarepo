@@ -1,0 +1,26 @@
+import requests
+from requests.auth import HTTPBasicAuth
+
+# Replace with your FlashSystem management IP, username, and password
+flashsystem_ip = "https://your-flash5000-management-ip"
+username = "admin"
+password = "yourpassword"
+
+# API endpoint for system info
+url = f"{flashsystem_ip}/rest/v1/system"
+
+response = requests.get(url, auth=HTTPBasicAuth(username, password), verify=False)
+
+if response.status_code == 200:
+    system_info = response.json()
+    # Uptime is usually part of the system attributes (in seconds)
+    uptime = system_info.get("uptime", None)
+    if uptime:
+        days = uptime // (24*3600)
+        hours = (uptime % (24*3600)) // 3600
+        minutes = (uptime % 3600) // 60
+        print(f"System Uptime: {days} days, {hours} hours, {minutes} minutes")
+    else:
+        print("Uptime not found in response")
+else:
+    print(f"Failed to fetch system info: {response.status_code}, {response.text}")
