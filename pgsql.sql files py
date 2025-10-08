@@ -1,1 +1,41 @@
-sa
+import psycopg2
+import pandas as pd
+
+# PostgreSQL connection configuration
+DB_CONFIG = {
+    "host": "your_host",          # e.g., "localhost" or "db.company.com"
+    "dbname": "your_database",
+    "user": "your_username",
+    "password": "your_password",
+    "port": 5432                  # default PostgreSQL port
+}
+
+# SQL file path
+SQL_FILE_PATH = "query.sql"
+
+# CSV output path
+OUTPUT_CSV = "output.csv"
+
+try:
+    # Connect to the PostgreSQL database
+    conn = psycopg2.connect(**DB_CONFIG)
+
+    # Read the SQL query from file
+    with open(SQL_FILE_PATH, "r") as file:
+        sql_query = file.read()
+
+    # Execute the query and load results into a DataFrame
+    df = pd.read_sql_query(sql_query, conn)
+
+    # Export results to CSV
+    df.to_csv(OUTPUT_CSV, index=False)
+
+    print(f"✅ Query executed successfully. Output saved to '{OUTPUT_CSV}'")
+
+except Exception as e:
+    print(f"❌ Error: {e}")
+
+finally:
+    # Close connection
+    if 'conn' in locals() and conn:
+        conn.close()
