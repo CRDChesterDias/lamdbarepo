@@ -1,0 +1,9 @@
+[Service]
+DeviceAllow=/dev/nvhost* rwm
+DeviceAllow=/dev/nvmap rwm
+DeviceAllow=/dev/nvhost-ctrl rwm
+DeviceAllow=/dev/nvhost-vic rwm
+DeviceAllow=/dev/nvhost-nvdec rwm
+DeviceAllow=/dev/nvhost-nvenc rwm
+Environment="PLEX_MEDIA_SERVER_INFO_VENDOR=NVIDIA"
+Environment="PLEX_MEDIA_SERVER_INFO_DEVICE=Jetson"
