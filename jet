@@ -7,3 +7,4 @@ DeviceAllow=/dev/nvhost-nvdec rwm
 DeviceAllow=/dev/nvhost-nvenc rwm
 Environment="PLEX_MEDIA_SERVER_INFO_VENDOR=NVIDIA"
 Environment="PLEX_MEDIA_SERVER_INFO_DEVICE=Jetson"
+Environment="PLEX_MEDIA_SERVER_USE_HW_TRANSCODE=1"
