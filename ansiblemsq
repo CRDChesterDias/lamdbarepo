@@ -1,0 +1,58 @@
+---
+- name: Copy single .txt file from remote, rename locally, and upload back
+  hosts: target_server
+  gather_facts: true
+  vars:
+    src_remote_dir: "/opt/data"
+    local_tmp_dir: "/tmp"
+    dest_remote_dir: "/opt/backup"
+
+  tasks:
+    - name: Find .txt file on remote
+      ansible.builtin.find:
+        paths: "{{ src_remote_dir }}"
+        patterns: "*.txt"
+        file_type: file
+      register: txt_files
+
+    - name: Fail if no .txt file found
+      ansible.builtin.fail:
+        msg: "No .txt file found in {{ src_remote_dir }}"
+      when: txt_files.matched == 0
+
+    - name: Set source and renamed local file paths
+      ansible.builtin.set_fact:
+        src_file_path: "{{ txt_files.files[0].path }}"
+        local_file_path: "{{ local_tmp_dir }}/{{ txt_files.files[0].path | basename }}"
+        local_renamed_file: "{{ local_tmp_dir }}/{{ txt_files.files[0].path | basename | regex_replace('\\.txt$', '') }}_{{ ansible_date_time.date }}.txt"
+        dest_remote_path: "{{ dest_remote_dir }}/{{ txt_files.files[0].path | basename | regex_replace('\\.txt$', '') }}_{{ ansible_date_time.date }}.txt"
+
+    - name: Fetch the file from remote to local
+      ansible.builtin.fetch:
+        src: "{{ src_file_path }}"
+        dest: "{{ local_file_path }}"
+        flat: yes
+
+    - name: Rename file locally (using Ansible copy)
+      ansible.builtin.copy:
+        src: "{{ local_file_path }}"
+        dest: "{{ local_renamed_file }}"
+      delegate_to: localhost
+
+    - name: Upload renamed file back to remote (different path)
+      ansible.builtin.copy:
+        src: "{{ local_renamed_file }}"
+        dest: "{{ dest_remote_path }}"
+        owner: root
+        group: root
+        mode: '0644'
+      delegate_to: localhost
+
+    - name: Cleanup local temp files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      delegate_to: localhost
+      loop:
+        - "{{ local_file_path }}"
+        - "{{ local_renamed_file }}"
