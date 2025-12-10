@@ -1,0 +1,49 @@
+import boto3
+import time
+from datetime import datetime, timezone
+
+dynamodb = boto3.resource("dynamodb")
+table = dynamodb.Table("connect_rate_limit")
+
+MAX_PER_DAY = 3
+
+def lambda_handler(event, context):
+    phone = event["Details"]["ContactData"]["CustomerEndpoint"]["Address"]
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    # TTL = midnight UTC
+    tomorrow = datetime.now(timezone.utc).replace(
+        hour=23, minute=59, second=59
+    )
+    ttl = int(tomorrow.timestamp())
+
+    key = {
+        "phone_number": phone,
+        "date": today
+    }
+
+    # Atomic update
+    response = table.update_item(
+        Key=key,
+        UpdateExpression="""
+            SET #c = if_not_exists(#c, :zero) + :one,
+                ttl = :ttl
+        """,
+        ExpressionAttributeNames={"#c": "count"},
+        ExpressionAttributeValues={
+            ":one": 1,
+            ":zero": 0,
+            ":ttl": ttl
+        },
+        ReturnValues="UPDATED_NEW"
+    )
+
+    attempts = response["Attributes"]["count"]
+    allowed = attempts <= MAX_PER_DAY
+
+    return {
+        "allowed": allowed,
+        "attempts": attempts,
+        "remaining": max(0, MAX_PER_DAY - attempts)
+    }
