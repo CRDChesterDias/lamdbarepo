@@ -1,0 +1,42 @@
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+boto3==1.34.144
+numpy==1.26.4
+torch==2.3.1
+torchaudio==2.3.1
+speechbrain==0.5.16
+~                  
+
+
+7  sudo pip install -r requirements.txt
+
+
+
+  16  export AWS_REGION=us-east-1
+   17  export AWS_DEFAULT_REGION=us-east-1
+   18  uvicorn app:app --host 0.0.0.0 --port 8080
+   19  pip uninstall -y huggingface_hub speechbrain
+   20  sudo pip uninstall -y huggingface_hub speechbrain
+   21  sudo pip install   speechbrain==0.5.16   huggingface_hub==0.19.4
+
+
+
+
+
+25  sudo dnf install -y   libsndfile   libsndfile-devel   sox   sox-devel
+   26  ls /usr/lib64/libsndfile.so*
+   27  sudo pip uninstall -y torchaudio
+   28  sudo pip install torchaudio --no-cache-dir
+   29  python - <<EOF
+import torchaudio
+print(torchaudio.list_audio_backends())
+EOF
+
+   30  sudo pip install soundfile
+   31  python - <<EOF
+import torchaudio
+print(torchaudio.list_audio_backends())
+EOF
+
+
+
