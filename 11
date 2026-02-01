@@ -1,0 +1,72 @@
+import json
+import os
+import boto3
+import urllib3
+from datetime import datetime
+
+s3 = boto3.client("s3")
+http = urllib3.PoolManager()
+
+EC2_API = os.environ["EC2_API"]
+BUCKET = os.environ["RECORDING_BUCKET"]
+INSTANCE_ID = os.environ["CONNECT_INSTANCE_ID"]
+
+def find_recording(contact_id, event_time):
+    dt = datetime.fromisoformat(event_time.replace("Z", "+00:00"))
+
+    prefix = (
+        f"AmazonConnect/{INSTANCE_ID}/CallRecordings/"
+        f"{dt.year}/{dt.month:02d}/{dt.day:02d}/"
+    )
+
+    resp = s3.list_objects_v2(
+        Bucket=BUCKET,
+        Prefix=prefix
+    )
+
+    if "Contents" not in resp:
+        raise Exception("No recordings found")
+
+    for obj in resp["Contents"]:
+        if contact_id in obj["Key"]:
+            return obj["Key"]
+
+    raise Exception("Recording not found")
+
+def call_api(path, payload):
+    url = f"{EC2_API}{path}"
+
+    r = http.request(
+        "POST",
+        url,
+        body=json.dumps(payload),
+        headers={"Content-Type": "application/json"}
+    )
+
+    return json.loads(r.data.decode())
+
+def lambda_handler(event, context):
+
+    details = event["Details"]["ContactData"]
+    params = event["Details"]["Parameters"]
+
+    contact_id = details["ContactId"]
+    phone = details["CustomerEndpoint"]["Address"]
+    event_time = details["InitiationTimestamp"]
+
+    action = params.get("action", "verify")
+
+    key = find_recording(contact_id, event_time)
+
+    payload = {
+        "phone_number": phone,
+        "bucket": BUCKET,
+        "key": key
+    }
+
+    if action == "enroll":
+        result = call_api("/enroll", payload)
+    else:
+        result = call_api("/verify", payload)
+
+    return result
