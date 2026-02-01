@@ -1,0 +1,53 @@
+import json
+import boto3
+import os
+
+# DynamoDB client
+ddb = boto3.client("dynamodb")
+
+# Table name (use env variable in Lambda config)
+TABLE = os.environ.get("TABLE", "speaker_embeddings")
+
+def lambda_handler(event, context):
+    """
+    Expected event:
+    {
+        "phone_number": "+15551234567"
+    }
+    """
+
+    phone_number = event.get("phone_number")
+
+    if not phone_number:
+        return {
+            "statusCode": 400,
+            "body": json.dumps({
+                "error": "phone_number is required"
+            })
+        }
+
+    try:
+        resp = ddb.get_item(
+            TableName=TABLE,
+            Key={
+                "phone_number": {"S": phone_number}
+            }
+        )
+
+        exists = "Item" in resp
+
+        return {
+            "statusCode": 200,
+            "body": json.dumps({
+                "phone_number": phone_number,
+                "exists": exists
+            })
+        }
+
+    except Exception as e:
+        return {
+            "statusCode": 500,
+            "body": json.dumps({
+                "error": str(e)
+            })
+        }
