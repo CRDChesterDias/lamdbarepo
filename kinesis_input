@@ -1,0 +1,56 @@
+import boto3
+import wave
+import time
+
+STREAM_NAME = "connect-audio-stream"
+CAPTURE_SECONDS = 50
+
+def lambda_handler(event, context):
+
+    kvs = boto3.client("kinesisvideo")
+
+    endpoint = kvs.get_data_endpoint(
+        StreamName=STREAM_NAME,
+        APIName="GET_MEDIA"
+    )["DataEndpoint"]
+
+    media_client = boto3.client(
+        "kinesis-video-media",
+        endpoint_url=endpoint
+    )
+
+    response = media_client.get_media(
+        StreamName=STREAM_NAME,
+        StartSelector={"StartSelectorType": "NOW"}
+    )
+
+    stream = response["Payload"]
+
+    pcm_buffer = bytearray()
+
+    start = time.time()
+
+    while time.time() - start < CAPTURE_SECONDS:
+        chunk = stream.read(4096)
+        if chunk:
+            pcm_buffer.extend(chunk)
+
+    # Write WAV
+    wav_path = "/tmp/capture.wav"
+
+    with wave.open(wav_path, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(16000)
+        wf.writeframes(pcm_buffer)
+
+    # Upload to S3
+    s3 = boto3.client("s3")
+
+    s3.upload_file(
+        wav_path,
+        "your-bucket",
+        "enrollment/capture.wav"
+    )
+
+    return {"status": "uploaded"}
