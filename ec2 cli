@@ -1,14 +1,12 @@
-$instances = aws ec2 describe-instances | ConvertFrom-Json
+Write-Output "ec2name,ami"
 
-$result = foreach ($reservation in $instances.Reservations) {
+$instances = aws ec2 describe-instances --region $region | ConvertFrom-Json
+
+foreach ($reservation in $instances.Reservations) {
     foreach ($instance in $reservation.Instances) {
         $name = ($instance.Tags | Where-Object {$_.Key -eq "Name"}).Value
-        $ami = aws ec2 describe-images --image-ids $instance.ImageId | ConvertFrom-Json
-        [PSCustomObject]@{
-            EC2_Name = $name
-            AMI_Name = $ami.Images[0].Name
-        }
+        $ami = aws ec2 describe-images --region $region --image-ids $instance.ImageId | ConvertFrom-Json
+
+        Write-Output "$name,$($ami.Images[0].Name)"
     }
 }
-
-$result | Export-Csv -Path "ec2_ami.csv" -NoTypeInformation
