@@ -1,0 +1,7 @@
+echo EC2_Name,AMI_Name > ec2_ami.csv
+
+for /f "tokens=1,2" %a in ('aws ec2 describe-instances --query "Reservations[].Instances[].[Tags[?Key==`Name`].Value | [0], ImageId]" --output text') do (
+    for /f "delims=" %c in ('aws ec2 describe-images --image-ids %b --query "Images[0].Name" --output text') do (
+        echo %a,%c >> ec2_ami.csv
+    )
+)
