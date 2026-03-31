@@ -1,7 +1,14 @@
-echo EC2_Name,AMI_Name > ec2_ami.csv
+$instances = aws ec2 describe-instances | ConvertFrom-Json
 
-for /f "tokens=1,2" %a in ('aws ec2 describe-instances --query "Reservations[].Instances[].[Tags[?Key==`Name`].Value | [0], ImageId]" --output text') do (
-    for /f "delims=" %c in ('aws ec2 describe-images --image-ids %b --query "Images[0].Name" --output text') do (
-        echo %a,%c >> ec2_ami.csv
-    )
-)
+$result = foreach ($reservation in $instances.Reservations) {
+    foreach ($instance in $reservation.Instances) {
+        $name = ($instance.Tags | Where-Object {$_.Key -eq "Name"}).Value
+        $ami = aws ec2 describe-images --image-ids $instance.ImageId | ConvertFrom-Json
+        [PSCustomObject]@{
+            EC2_Name = $name
+            AMI_Name = $ami.Images[0].Name
+        }
+    }
+}
+
+$result | Export-Csv -Path "ec2_ami.csv" -NoTypeInformation
