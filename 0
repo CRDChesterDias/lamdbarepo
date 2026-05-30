@@ -1,0 +1,57 @@
+#!/bin/bash
+
+QUALYS_BASE_URL="https://qualysapi.qg2.apps.qualys.com"
+QUALYS_USER="your_username"
+QUALYS_PASS="your_password"
+
+PRIVATE_IP="10.0.1.100"
+INSTANCE_ID="i-0123456789abcdef0"
+
+HOST_LIST_FILE="host_list.xml"
+DETECTION_FILE="detections.xml"
+
+echo "Fetching Qualys host list for IP: $PRIVATE_IP"
+
+HTTP_CODE=$(curl -s -w "%{http_code}" -o "$HOST_LIST_FILE" \
+  -u "$QUALYS_USER:$QUALYS_PASS" \
+  -H "X-Requested-With: shell-script" \
+  "$QUALYS_BASE_URL/api/2.0/fo/asset/host/?action=list&ips=$PRIVATE_IP&details=All")
+
+if [ "$HTTP_CODE" != "200" ]; then
+  echo "Qualys host list API failed. HTTP Code: $HTTP_CODE"
+  exit 1
+fi
+
+echo "Host list API returned HTTP 200"
+
+if grep -q "$INSTANCE_ID" "$HOST_LIST_FILE"; then
+  echo "Instance ID found in Qualys host list: $INSTANCE_ID"
+  echo "Code 200"
+else
+  echo "Instance ID NOT found in Qualys host list: $INSTANCE_ID"
+  exit 2
+fi
+
+HOST_ID=$(grep -m1 "<ID>" "$HOST_LIST_FILE" | sed -E 's/.*<ID>([^<]+)<\/ID>.*/\1/')
+
+if [ -z "$HOST_ID" ]; then
+  echo "Unable to extract Qualys Host ID"
+  exit 3
+fi
+
+echo "Qualys Host ID: $HOST_ID"
+
+echo "Fetching detections for Host ID: $HOST_ID"
+
+DETECTION_HTTP_CODE=$(curl -s -w "%{http_code}" -o "$DETECTION_FILE" \
+  -u "$QUALYS_USER:$QUALYS_PASS" \
+  -H "X-Requested-With: shell-script" \
+  "$QUALYS_BASE_URL/api/2.0/fo/asset/host/vm/detection/?action=list&ids=$HOST_ID")
+
+if [ "$DETECTION_HTTP_CODE" != "200" ]; then
+  echo "Detection API failed. HTTP Code: $DETECTION_HTTP_CODE"
+  exit 4
+fi
+
+echo "Detection API returned HTTP 200"
+echo "Detections saved to: $DETECTION_FILE"
