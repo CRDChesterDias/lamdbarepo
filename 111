@@ -1,0 +1,21 @@
+$QualysUser = "your_username"
+$QualysPassword = "your_password"
+
+$Pair = "${QualysUser}:${QualysPassword}"
+$EncodedCredentials = [Convert]::ToBase64String(
+    [Text.Encoding]::ASCII.GetBytes($Pair)
+)
+
+$Headers = @{
+    "Authorization"    = "Basic $EncodedCredentials"
+    "X-Requested-With" = "PowerShell"
+}
+
+$Uri = "https://qualysapi.qg2.apps.qualys.com/api/5.0/fo/asset/host/vm/detection/?action=list&truncation_limit=10"
+
+$response = Invoke-RestMethod `
+    -Uri $Uri `
+    -Method Get `
+    -Headers $Headers
+
+$response
