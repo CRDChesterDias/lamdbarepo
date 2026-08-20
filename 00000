@@ -1,0 +1,92 @@
+import requests
+import json
+import sys
+
+# ============================================================
+# CONFIG
+# ============================================================
+
+GATEWAY_URL = "https://gateway.qg2.apps.qualys.com"
+
+USERNAME = "YOUR_USERNAME"
+PASSWORD = "YOUR_PASSWORD"
+
+# Put one Host/Asset ID from your working VMDR response here
+ASSET_ID = "12345678"
+
+
+# ============================================================
+# GET JWT TOKEN
+# ============================================================
+
+def get_jwt():
+
+    url = f"{GATEWAY_URL}/auth"
+
+    response = requests.post(
+        url,
+        data={
+            "username": USERNAME,
+            "password": PASSWORD,
+            "token": "true"
+        },
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        timeout=30
+    )
+
+    print("Authentication status:", response.status_code)
+
+    if response.status_code not in (200, 201):
+        print(response.text)
+        sys.exit(1)
+
+    return response.text.strip()
+
+
+# ============================================================
+# GET CSAM ASSET DETAILS
+# ============================================================
+
+def get_asset(token):
+
+    url = f"{GATEWAY_URL}/am/v1/asset/host/id"
+
+    params = {
+        "assetId": ASSET_ID
+    }
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.post(
+        url,
+        params=params,
+        headers=headers,
+        timeout=30
+    )
+
+    print("Asset API status:", response.status_code)
+    print("Request URL:", response.url)
+
+    if response.status_code != 200:
+        print("\nResponse:")
+        print(response.text)
+        sys.exit(1)
+
+    return response.json()
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+token = get_jwt()
+
+asset = get_asset(token)
+
+print("\nCSAM Asset:")
+print(json.dumps(asset, indent=2))
