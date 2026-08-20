@@ -1,0 +1,60 @@
+import requests
+import xml.etree.ElementTree as ET
+from requests.auth import HTTPBasicAuth
+
+BASE_URL = "https://qualysapi.qg2.apps.qualys.com"
+
+USERNAME = "YOUR_USERNAME"
+PASSWORD = "YOUR_PASSWORD"
+
+SEARCH_TEXT = "server security"
+
+url = f"{BASE_URL}/api/4.0/fo/knowledge_base/vuln/"
+
+params = {
+    "action": "list",
+    "details": "Basic"
+}
+
+response = requests.get(
+    url,
+    params=params,
+    headers={
+        "X-Requested-With": "Python"
+    },
+    auth=HTTPBasicAuth(USERNAME, PASSWORD),
+    timeout=60
+)
+
+print("HTTP Status:", response.status_code)
+
+if response.status_code != 200:
+    print(response.text)
+    raise SystemExit(1)
+
+root = ET.fromstring(response.content)
+
+print()
+print(f'{"QID":10} {"Category":25} Title')
+print("-" * 120)
+
+count = 0
+
+for vuln in root.findall(".//VULN"):
+
+    qid = vuln.findtext("QID", "").strip()
+    title = vuln.findtext("TITLE", "").strip()
+    category = vuln.findtext("CATEGORY", "").strip()
+
+    if SEARCH_TEXT.lower() in title.lower():
+
+        print(
+            f"{qid:10} "
+            f"{category[:25]:25} "
+            f"{title}"
+        )
+
+        count += 1
+
+print()
+print("Total matching QIDs:", count)
