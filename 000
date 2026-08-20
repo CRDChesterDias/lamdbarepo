@@ -1,0 +1,155 @@
+import requests
+import json
+import csv
+import sys
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+QUALYS_GATEWAY = "https://gateway.qg2.apps.qualys.com"
+
+USERNAME = "YOUR_USERNAME"
+PASSWORD = "YOUR_PASSWORD"
+
+# Dummy AWS Account ID
+AWS_ACCOUNT_ID = "123456789012"
+
+OUTPUT_FILE = "qualys_windows_security_updates.csv"
+
+
+# ============================================================
+# GET QUALYS JWT TOKEN
+# ============================================================
+
+def get_token():
+
+    url = f"{QUALYS_GATEWAY}/auth"
+
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    data = {
+        "username": USERNAME,
+        "password": PASSWORD,
+        "token": "true"
+    }
+
+    print("Authenticating to Qualys...")
+
+    response = requests.post(
+        url,
+        headers=headers,
+        data=data,
+        timeout=60
+    )
+
+    print("Authentication HTTP status:", response.status_code)
+
+    if response.status_code != 201 and response.status_code != 200:
+        print("Authentication failed:")
+        print(response.text)
+        sys.exit(1)
+
+    token = response.text.strip()
+
+    print("Authentication successful.")
+
+    return token
+
+
+# ============================================================
+# SEARCH QUALYS ASSETS
+# ============================================================
+
+def search_assets(token):
+
+    url = f"{QUALYS_GATEWAY}/rest/2.0/search/am/asset"
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    # --------------------------------------------------------
+    # QQL FILTER
+    #
+    # AWS account
+    # + Running EC2 instances
+    # --------------------------------------------------------
+
+    qql_filter = (
+        f"aws.ec2.accountId:{AWS_ACCOUNT_ID} "
+        f"and aws.ec2.instanceState:RUNNING"
+    )
+
+    print()
+    print("Qualys QQL:")
+    print(qql_filter)
+    print()
+
+    payload = {
+        "filters": [
+            {
+                "field": "qql",
+                "operator": "CONTAINS",
+                "value": qql_filter
+            }
+        ]
+    }
+
+    response = requests.post(
+        url,
+        headers=headers,
+        json=payload,
+        timeout=120
+    )
+
+    print("Asset API HTTP status:", response.status_code)
+
+    if response.status_code != 200:
+        print("Asset API request failed:")
+        print(response.text)
+        sys.exit(1)
+
+    return response.json()
+
+
+# ============================================================
+# DEBUG ASSET STRUCTURE
+# ============================================================
+
+def show_sample(data):
+
+    print()
+    print("=" * 80)
+    print("QUALYS RESPONSE SAMPLE")
+    print("=" * 80)
+
+    print(
+        json.dumps(
+            data,
+            indent=2
+        )[:15000]
+    )
+
+    print()
+    print("=" * 80)
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+def main():
+
+    token = get_token()
+
+    data = search_assets(token)
+
+    show_sample(data)
+
+
+if __name__ == "__main__":
+    main()
