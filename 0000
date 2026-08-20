@@ -1,0 +1,57 @@
+import requests
+import xml.etree.ElementTree as ET
+from requests.auth import HTTPBasicAuth
+
+BASE_URL = "https://qualysapi.qg2.apps.qualys.com"
+
+USERNAME = "YOUR_USERNAME"
+PASSWORD = "YOUR_PASSWORD"
+
+AWS_TAG = "AWS-EC2"
+
+url = f"{BASE_URL}/api/4.0/fo/asset/host/"
+
+params = {
+    "action": "list",
+    "use_tags": "1",
+    "tag_set_by": "name",
+    "tag_set_include": AWS_TAG,
+    "details": "All"
+}
+
+response = requests.get(
+    url,
+    params=params,
+    headers={
+        "X-Requested-With": "Python"
+    },
+    auth=HTTPBasicAuth(USERNAME, PASSWORD),
+    timeout=30
+)
+
+print("HTTP Status:", response.status_code)
+
+if response.status_code != 200:
+    print(response.text)
+    raise SystemExit(1)
+
+root = ET.fromstring(response.content)
+
+print()
+print(f'{"Host ID":12} {"Hostname":40} {"IP":16}')
+print("-" * 75)
+
+for host in root.findall(".//HOST"):
+
+    host_id = host.findtext("ID", "")
+    ip = host.findtext("IP", "")
+    dns = host.findtext("DNS", "")
+    netbios = host.findtext("NETBIOS", "")
+
+    hostname = dns or netbios or "UNKNOWN"
+
+    print(
+        f"{host_id:12} "
+        f"{hostname[:40]:40} "
+        f"{ip:16}"
+    )
