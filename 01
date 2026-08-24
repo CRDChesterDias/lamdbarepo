@@ -1,0 +1,157 @@
+import pandas as pd
+
+# --------------------------------------------------
+# Load CSV
+# --------------------------------------------------
+
+df = pd.read_csv("qualys_data.csv")
+
+# Normalize fields
+df["Status"] = (
+    df["Status"]
+    .fillna("")
+    .str.strip()
+    .str.upper()
+)
+
+df["Title"] = (
+    df["Title"]
+    .fillna("")
+    .str.strip()
+)
+
+# Normalize hostname so:
+# SERVER01
+# server01.acme.com
+# both become server01
+
+df["hostname"] = (
+    df["DNS"]
+    .fillna("")
+    .str.strip()
+    .str.lower()
+    .str.split(".")
+    .str[0]
+)
+
+# Make sure QID is numeric
+df["QID"] = pd.to_numeric(
+    df["QID"],
+    errors="coerce"
+)
+
+
+# ==================================================
+# SHEET 1 - SUMMARY
+# Blank for now
+# ==================================================
+
+summary_df = pd.DataFrame()
+
+
+# ==================================================
+# SHEET 2 - ACTIVE / NEW
+#
+# Conditions:
+# Status = ACTIVE or NEW
+# Title not blank
+# Title != Pending Reboot
+# Unique hostname
+# ==================================================
+
+active_new_df = df[
+    df["Status"].isin(["ACTIVE", "NEW"])
+    & (df["Title"] != "")
+    & (df["Title"].str.lower() != "pending reboot")
+    & (df["hostname"] != "")
+].copy()
+
+# Keep one entry per hostname
+active_new_df = active_new_df.drop_duplicates(
+    subset=["hostname"]
+)
+
+
+# ==================================================
+# SHEET 3 - PENDING REBOOT
+#
+# QID = 90126
+# Unique hostname
+# ==================================================
+
+pending_reboot_df = df[
+    (df["QID"] == 90126)
+    & (df["hostname"] != "")
+].copy()
+
+pending_reboot_df = pending_reboot_df.drop_duplicates(
+    subset=["hostname"]
+)
+
+
+# ==================================================
+# SHEET 4 - FIXED
+#
+# Status = FIXED
+# Title not blank
+# Title != Pending Reboot
+# Unique hostname
+# ==================================================
+
+fixed_df = df[
+    (df["Status"] == "FIXED")
+    & (df["Title"] != "")
+    & (df["Title"].str.lower() != "pending reboot")
+    & (df["hostname"] != "")
+].copy()
+
+fixed_df = fixed_df.drop_duplicates(
+    subset=["hostname"]
+)
+
+
+# ==================================================
+# COUNTS
+# ==================================================
+
+print("Active/New hosts :", len(active_new_df))
+print("Pending Reboot   :", len(pending_reboot_df))
+print("Fixed hosts      :", len(fixed_df))
+
+
+# ==================================================
+# EXPORT TO EXCEL
+# ==================================================
+
+output_file = "qualys_patch_report.xlsx"
+
+with pd.ExcelWriter(
+    output_file,
+    engine="openpyxl"
+) as writer:
+
+    summary_df.to_excel(
+        writer,
+        sheet_name="Summary",
+        index=False
+    )
+
+    active_new_df.to_excel(
+        writer,
+        sheet_name="Active-New",
+        index=False
+    )
+
+    pending_reboot_df.to_excel(
+        writer,
+        sheet_name="Pending Reboot",
+        index=False
+    )
+
+    fixed_df.to_excel(
+        writer,
+        sheet_name="Fixed",
+        index=False
+    )
+
+print(f"Created: {output_file}")
