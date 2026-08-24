@@ -1,0 +1,42 @@
+# ==================================================
+# SHEET 4 - PATCHED
+#
+# Read master Windows server inventory
+# Remove anything already present in Active/New
+# Remaining servers are assumed patched
+# ==================================================
+
+windows_df = pd.read_csv("windows_server.csv")
+
+# Normalize hostname in the master inventory
+windows_df["hostname"] = (
+    windows_df["DNS"]
+    .fillna("")
+    .str.strip()
+    .str.lower()
+    .str.split(".")
+    .str[0]
+)
+
+# Remove blank hostnames
+windows_df = windows_df[
+    windows_df["hostname"] != ""
+].copy()
+
+# One row per hostname
+windows_df = windows_df.drop_duplicates(
+    subset=["hostname"]
+)
+
+# Get hostnames currently Active/New
+active_new_hosts = set(
+    active_new_df["hostname"]
+)
+
+# Keep servers NOT found in Active/New
+fixed_df = windows_df[
+    ~windows_df["hostname"].isin(active_new_hosts)
+].copy()
+
+# Optional status column
+fixed_df["PatchStatus"] = "PATCHED"
