@@ -1,0 +1,66 @@
+name: Qualys Windows Patch Report
+
+on:
+  # Run manually from GitHub UI
+  workflow_dispatch:
+
+  # Run every Monday at 8:00 AM UTC
+  schedule:
+    - cron: "0 8 * * 1"
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      # --------------------------------------------------
+      # Checkout repository
+      # --------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # --------------------------------------------------
+      # Install Python
+      # --------------------------------------------------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # --------------------------------------------------
+      # Install dependencies
+      # --------------------------------------------------
+      - name: Install Python packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas requests openpyxl matplotlib seaborn
+
+      # --------------------------------------------------
+      # Run Qualys report
+      # --------------------------------------------------
+      - name: Generate Qualys patch report
+        env:
+          QUALYS_USERNAME: ${{ secrets.QUALYS_USERNAME }}
+          QUALYS_PASSWORD: ${{ secrets.QUALYS_PASSWORD }}
+          QUALYS_BASE_URL: ${{ secrets.QUALYS_BASE_URL }}
+        run: |
+          python qualys_report.py
+
+      # --------------------------------------------------
+      # Verify report exists
+      # --------------------------------------------------
+      - name: Verify report
+        run: |
+          ls -lh
+          test -f qualys_patch_report.xlsx
+
+      # --------------------------------------------------
+      # Upload Excel report as GitHub Artifact
+      # --------------------------------------------------
+      - name: Upload Qualys patch report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Qualys-Windows-Patch-Report
+          path: qualys_patch_report.xlsx
+          retention-days: 30
+          if-no-files-found: error
