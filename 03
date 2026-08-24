@@ -1,0 +1,64 @@
+import matplotlib.pyplot as plt
+
+patched_count = fixed_df["hostname"].nunique()
+unpatched_count = unpatched_df["hostname"].nunique()
+pending_count = pending_reboot_df["hostname"].nunique()
+
+statuses = [
+    "Patched",
+    "Unpatched",
+    "Pending Reboot"
+]
+
+counts = [
+    patched_count,
+    unpatched_count,
+    pending_count
+]
+
+total = sum(counts)
+
+fig, ax = plt.subplots(figsize=(10, 5))
+
+bars = ax.barh(
+    statuses,
+    counts
+)
+
+ax.set_title(
+    "Windows Server Patch Compliance",
+    fontsize=16,
+    fontweight="bold"
+)
+
+ax.set_xlabel("Number of Servers")
+
+for bar, count in zip(bars, counts):
+
+    percentage = (
+        count / total * 100
+        if total > 0
+        else 0
+    )
+
+    ax.text(
+        bar.get_width() + max(counts) * 0.01,
+        bar.get_y() + bar.get_height() / 2,
+        f"{count} ({percentage:.1f}%)",
+        va="center",
+        fontsize=11,
+        fontweight="bold"
+    )
+
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+plt.tight_layout()
+
+plt.savefig(
+    "windows_patch_compliance.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.show()
