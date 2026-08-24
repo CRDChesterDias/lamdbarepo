@@ -1,64 +1,368 @@
+import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
+
+from openpyxl import load_workbook
+from openpyxl.drawing.image import Image
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
+
+
+# ==========================================================
+# COUNTS
+# ==========================================================
 
 patched_count = fixed_df["hostname"].nunique()
+
 unpatched_count = unpatched_df["hostname"].nunique()
+
 pending_count = pending_reboot_df["hostname"].nunique()
 
-statuses = [
-    "Patched",
-    "Unpatched",
-    "Pending Reboot"
-]
-
-counts = [
-    patched_count,
-    unpatched_count,
-    pending_count
-]
-
-total = sum(counts)
-
-fig, ax = plt.subplots(figsize=(10, 5))
-
-bars = ax.barh(
-    statuses,
-    counts
+total_count = (
+    patched_count
+    + unpatched_count
+    + pending_count
 )
 
-ax.set_title(
-    "Windows Server Patch Compliance",
-    fontsize=16,
-    fontweight="bold"
+
+# ==========================================================
+# PERCENTAGES
+# ==========================================================
+
+patched_pct = (
+    patched_count / total_count * 100
+    if total_count else 0
 )
 
-ax.set_xlabel("Number of Servers")
+unpatched_pct = (
+    unpatched_count / total_count * 100
+    if total_count else 0
+)
 
-for bar, count in zip(bars, counts):
+pending_pct = (
+    pending_count / total_count * 100
+    if total_count else 0
+)
 
-    percentage = (
-        count / total * 100
-        if total > 0
-        else 0
-    )
 
-    ax.text(
-        bar.get_width() + max(counts) * 0.01,
-        bar.get_y() + bar.get_height() / 2,
-        f"{count} ({percentage:.1f}%)",
-        va="center",
+# ==========================================================
+# CREATE CHART
+# ==========================================================
+
+chart_df = pd.DataFrame({
+    "Patch Status": [
+        "Patched",
+        "Unpatched",
+        "Pending Reboot"
+    ],
+    "Server Count": [
+        patched_count,
+        unpatched_count,
+        pending_count
+    ]
+})
+
+chart_df["Percentage"] = (
+    chart_df["Server Count"] /
+    total_count * 100
+)
+
+sns.set_theme(
+    style="whitegrid",
+    context="talk"
+)
+
+plt.figure(figsize=(10, 6))
+
+ax = sns.barplot(
+    data=chart_df,
+    x="Patch Status",
+    y="Server Count"
+)
+
+
+# ----------------------------------------------------------
+# Add labels
+# ----------------------------------------------------------
+
+for container in ax.containers:
+
+    labels = []
+
+    for bar, (_, row) in zip(
+        container,
+        chart_df.iterrows()
+    ):
+
+        labels.append(
+            f'{int(row["Server Count"])}\n'
+            f'({row["Percentage"]:.1f}%)'
+        )
+
+    ax.bar_label(
+        container,
+        labels=labels,
+        padding=8,
         fontsize=11,
         fontweight="bold"
     )
 
-ax.spines["top"].set_visible(False)
-ax.spines["right"].set_visible(False)
+
+ax.set_title(
+    "Windows Server Patch Compliance",
+    fontsize=18,
+    fontweight="bold",
+    pad=20
+)
+
+ax.set_xlabel("")
+ax.set_ylabel("Number of Servers")
+
+ax.set_ylim(
+    0,
+    chart_df["Server Count"].max() * 1.20
+)
+
+sns.despine()
 
 plt.tight_layout()
 
+chart_file = "windows_patch_compliance.png"
+
 plt.savefig(
-    "windows_patch_compliance.png",
-    dpi=300,
+    chart_file,
+    dpi=200,
     bbox_inches="tight"
 )
 
-plt.show()
+plt.close()
+
+
+# ==========================================================
+# WRITE DATA TO EXCEL
+# ==========================================================
+
+output_file = "qualys_patch_report.xlsx"
+
+summary_df = pd.DataFrame()
+
+with pd.ExcelWriter(
+    output_file,
+    engine="openpyxl"
+) as writer:
+
+    summary_df.to_excel(
+        writer,
+        sheet_name="Summary",
+        index=False
+    )
+
+    active_new_df.to_excel(
+        writer,
+        sheet_name="Active-New",
+        index=False
+    )
+
+    pending_reboot_df.to_excel(
+        writer,
+        sheet_name="Pending Reboot",
+        index=False
+    )
+
+    unpatched_df.to_excel(
+        writer,
+        sheet_name="Unpatched",
+        index=False
+    )
+
+    fixed_df.to_excel(
+        writer,
+        sheet_name="Patched",
+        index=False
+    )
+
+
+# ==========================================================
+# FORMAT SUMMARY SHEET
+# ==========================================================
+
+wb = load_workbook(output_file)
+
+ws = wb["Summary"]
+
+
+# ----------------------------------------------------------
+# Page title
+# ----------------------------------------------------------
+
+ws.merge_cells("B2:H3")
+
+title_cell = ws["B2"]
+
+title_cell.value = "Windows Server Patch Compliance"
+
+title_cell.font = Font(
+    size=22,
+    bold=True
+)
+
+title_cell.alignment = Alignment(
+    horizontal="center",
+    vertical="center"
+)
+
+
+# ==========================================================
+# KPI CARDS
+# ==========================================================
+
+# Total
+ws["B5"] = "Total Servers"
+ws["B6"] = total_count
+
+# Patched
+ws["D5"] = "Patched"
+ws["D6"] = patched_count
+ws["D7"] = f"{patched_pct:.1f}%"
+
+# Unpatched
+ws["F5"] = "Unpatched"
+ws["F6"] = unpatched_count
+ws["F7"] = f"{unpatched_pct:.1f}%"
+
+# Pending reboot
+ws["H5"] = "Pending Reboot"
+ws["H6"] = pending_count
+ws["H7"] = f"{pending_pct:.1f}%"
+
+
+# ----------------------------------------------------------
+# KPI heading formatting
+# ----------------------------------------------------------
+
+for cell in [
+    "B5",
+    "D5",
+    "F5",
+    "H5"
+]:
+
+    ws[cell].font = Font(
+        bold=True,
+        size=12
+    )
+
+    ws[cell].alignment = Alignment(
+        horizontal="center"
+    )
+
+
+# ----------------------------------------------------------
+# KPI number formatting
+# ----------------------------------------------------------
+
+for cell in [
+    "B6",
+    "D6",
+    "F6",
+    "H6"
+]:
+
+    ws[cell].font = Font(
+        bold=True,
+        size=22
+    )
+
+    ws[cell].alignment = Alignment(
+        horizontal="center"
+    )
+
+
+# Percentage formatting
+for cell in [
+    "D7",
+    "F7",
+    "H7"
+]:
+
+    ws[cell].font = Font(
+        bold=True,
+        size=12
+    )
+
+    ws[cell].alignment = Alignment(
+        horizontal="center"
+    )
+
+
+# ==========================================================
+# OPTIONAL KPI BACKGROUNDS
+# ==========================================================
+
+# Patched
+for row in range(5, 8):
+    ws[f"D{row}"].fill = PatternFill(
+        "solid",
+        fgColor="E2F0D9"
+    )
+
+# Unpatched
+for row in range(5, 8):
+    ws[f"F{row}"].fill = PatternFill(
+        "solid",
+        fgColor="FCE4D6"
+    )
+
+# Pending reboot
+for row in range(5, 8):
+    ws[f"H{row}"].fill = PatternFill(
+        "solid",
+        fgColor="FFF2CC"
+    )
+
+# Total
+for row in range(5, 8):
+    ws[f"B{row}"].fill = PatternFill(
+        "solid",
+        fgColor="D9EAF7"
+    )
+
+
+# ==========================================================
+# INSERT CHART IMAGE
+# ==========================================================
+
+img = Image(chart_file)
+
+img.width = 800
+img.height = 480
+
+ws.add_image(
+    img,
+    "B10"
+)
+
+
+# ==========================================================
+# COLUMN WIDTHS
+# ==========================================================
+
+for column in range(1, 11):
+
+    ws.column_dimensions[
+        get_column_letter(column)
+    ].width = 15
+
+
+# Make KPI columns wider
+for column in ["B", "D", "F", "H"]:
+    ws.column_dimensions[column].width = 20
+
+
+# ==========================================================
+# SAVE
+# ==========================================================
+
+wb.save(output_file)
+
+print(f"Created: {output_file}")
