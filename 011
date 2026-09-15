@@ -1,0 +1,278 @@
+import requests
+from requests.auth import HTTPBasicAuth
+from collections import Counter
+
+# ============================================================
+# ServiceNow Configuration
+# ============================================================
+
+INSTANCE = "https://YOUR_INSTANCE.service-now.com"
+USERNAME = "YOUR_USERNAME"
+PASSWORD = "YOUR_PASSWORD"
+
+session = requests.Session()
+session.auth = HTTPBasicAuth(USERNAME, PASSWORD)
+session.headers.update({
+    "Accept": "application/json",
+    "Content-Type": "application/json"
+})
+
+
+# ============================================================
+# Generic ServiceNow Table API Function
+# ============================================================
+
+def get_records(table, query="", fields=None, limit=10):
+    """
+    Read records from any ServiceNow table.
+    """
+
+    url = f"{INSTANCE}/api/now/table/{table}"
+
+    params = {
+        "sysparm_query": query,
+        "sysparm_limit": limit,
+        "sysparm_display_value": "true",
+        "sysparm_exclude_reference_link": "true"
+    }
+
+    if fields:
+        params["sysparm_fields"] = ",".join(fields)
+
+    response = session.get(url, params=params, timeout=30)
+    response.raise_for_status()
+
+    return response.json()["result"]
+
+
+# ============================================================
+# 1. Recent Incidents
+# ============================================================
+
+def get_recent_incidents(limit=10):
+
+    fields = [
+        "sys_id",
+        "number",
+        "short_description",
+        "state",
+        "priority",
+        "assignment_group",
+        "assigned_to",
+        "opened_at",
+        "sys_updated_on"
+    ]
+
+    return get_records(
+        table="incident",
+        query="ORDERBYDESCsys_created_on",
+        fields=fields,
+        limit=limit
+    )
+
+
+# ============================================================
+# 2. Recent RITMs
+# ============================================================
+
+def get_recent_ritms(limit=10):
+
+    fields = [
+        "sys_id",
+        "number",
+        "short_description",
+        "state",
+        "assignment_group",
+        "assigned_to",
+        "opened_at",
+        "sys_updated_on"
+    ]
+
+    return get_records(
+        table="sc_req_item",
+        query="ORDERBYDESCsys_created_on",
+        fields=fields,
+        limit=limit
+    )
+
+
+# ============================================================
+# 3. Recent Catalog Tasks
+# ============================================================
+
+def get_recent_tasks(limit=10):
+
+    fields = [
+        "sys_id",
+        "number",
+        "short_description",
+        "state",
+        "assignment_group",
+        "assigned_to",
+        "opened_at",
+        "sys_updated_on"
+    ]
+
+    return get_records(
+        table="sc_task",
+        query="ORDERBYDESCsys_created_on",
+        fields=fields,
+        limit=limit
+    )
+
+
+# ============================================================
+# 4. Recent Change Requests
+# ============================================================
+
+def get_recent_changes(limit=10):
+
+    fields = [
+        "sys_id",
+        "number",
+        "short_description",
+        "state",
+        "type",
+        "risk",
+        "assignment_group",
+        "assigned_to",
+        "start_date",
+        "end_date",
+        "sys_updated_on"
+    ]
+
+    return get_records(
+        table="change_request",
+        query="ORDERBYDESCsys_created_on",
+        fields=fields,
+        limit=limit
+    )
+
+
+# ============================================================
+# 5. Find Incident by Number
+# ============================================================
+
+def get_incident(incident_number):
+
+    records = get_records(
+        table="incident",
+        query=f"number={incident_number}",
+        fields=[
+            "sys_id",
+            "number",
+            "short_description",
+            "assignment_group"
+        ],
+        limit=1
+    )
+
+    if not records:
+        raise ValueError(f"Incident {incident_number} not found")
+
+    return records[0]
+
+
+# ============================================================
+# 6. Assignment Group Change History
+# ============================================================
+
+def get_assignment_group_history(incident_number):
+
+    incident = get_incident(incident_number)
+
+    incident_sys_id = incident["sys_id"]
+
+    print(f"\nIncident: {incident_number}")
+    print(f"Description: {incident.get('short_description')}")
+    print(f"Current Group: {incident.get('assignment_group')}")
+    print(f"Sys ID: {incident_sys_id}")
+
+    # sys_audit contains field-level change history
+    audit_records = get_records(
+        table="sys_audit",
+        query=(
+            f"documentkey={incident_sys_id}"
+            "^fieldname=assignment_group"
+            "^ORDERBYsys_created_on"
+        ),
+        fields=[
+            "sys_id",
+            "sys_created_on",
+            "user",
+            "oldvalue",
+            "newvalue"
+        ],
+        limit=1000
+    )
+
+    return audit_records
+
+
+# ============================================================
+# Display assignment group history
+# ============================================================
+
+def show_assignment_group_history(incident_number):
+
+    history = get_assignment_group_history(incident_number)
+
+    print("\n==========================================")
+    print("ASSIGNMENT GROUP CHANGE HISTORY")
+    print("==========================================")
+
+    if not history:
+        print("No assignment group changes found.")
+        return
+
+    for i, change in enumerate(history, start=1):
+
+        print(f"\nChange #{i}")
+        print(f"Date : {change.get('sys_created_on')}")
+        print(f"User : {change.get('user')}")
+        print(f"From : {change.get('oldvalue')}")
+        print(f"To   : {change.get('newvalue')}")
+
+    print("\n------------------------------------------")
+    print(f"Total assignment group changes: {len(history)}")
+    print("------------------------------------------")
+
+
+# ============================================================
+# Pretty Print Records
+# ============================================================
+
+def print_records(title, records):
+
+    print(f"\n{'=' * 70}")
+    print(title)
+    print("=" * 70)
+
+    for record in records:
+
+        print(
+            f"{record.get('number', ''):<15} "
+            f"{record.get('state', ''):<15} "
+            f"{str(record.get('assignment_group', '')):<30} "
+            f"{record.get('short_description', '')}"
+        )
+
+
+# ============================================================
+# Main
+# ============================================================
+
+if __name__ == "__main__":
+
+    incidents = get_recent_incidents(10)
+    ritms = get_recent_ritms(10)
+    tasks = get_recent_tasks(10)
+    changes = get_recent_changes(10)
+
+    print_records("10 MOST RECENT INCIDENTS", incidents)
+    print_records("10 MOST RECENT RITMs", ritms)
+    print_records("10 MOST RECENT TASKS", tasks)
+    print_records("10 MOST RECENT CHANGES", changes)
+
+    # Example:
+    # show_assignment_group_history("INC0012345")
