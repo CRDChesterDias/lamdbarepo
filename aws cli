@@ -1,0 +1,30 @@
+INSTANCE_ID="i-0123456789abcdef0"
+REGION="us-east-1"
+
+aws cloudtrail lookup-events \
+  --region "$REGION" \
+  --lookup-attributes AttributeKey=EventName,AttributeValue=CreateTags \
+  --output json |
+jq --arg id "$INSTANCE_ID" '
+  .Events[]
+  | .CloudTrailEvent
+  | fromjson
+  | select(
+      any(.requestParameters.resourcesSet.items[]?;
+          .resourceId == $id)
+    )
+  | select(
+      any(.requestParameters.tagSet.items[]?;
+          .key == "Name")
+    )
+  | {
+      Time: .eventTime,
+      ChangedBy: .userIdentity.arn,
+      SourceIP: .sourceIPAddress,
+      NewName: [
+        .requestParameters.tagSet.items[]
+        | select(.key == "Name")
+        | .value
+      ][0]
+    }
+'
