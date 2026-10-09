@@ -1,0 +1,27 @@
+$InstanceId = "i-0123456789abcdef0"
+$Region = "us-east-1"
+
+$events = aws cloudtrail lookup-events `
+    --region $Region `
+    --lookup-attributes AttributeKey=EventName,AttributeValue=CreateTags `
+    --output json | ConvertFrom-Json
+
+$events.Events | ForEach-Object {
+
+    $event = $_.CloudTrailEvent | ConvertFrom-Json
+
+    $instanceMatch = $event.requestParameters.resourcesSet.items |
+        Where-Object { $_.resourceId -eq $InstanceId }
+
+    $nameTag = $event.requestParameters.tagSet.items |
+        Where-Object { $_.key -eq "Name" }
+
+    if ($instanceMatch -and $nameTag) {
+        [PSCustomObject]@{
+            Time      = $event.eventTime
+            ChangedBy = $event.userIdentity.arn
+            SourceIP  = $event.sourceIPAddress
+            NewName   = $nameTag.value
+        }
+    }
+} | Format-Table -AutoSize
