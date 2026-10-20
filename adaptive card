@@ -1,0 +1,42 @@
+
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.4",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "ServiceNow Incident",
+      "weight": "Bolder",
+      "size": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "INC0012345",
+      "weight": "Bolder",
+      "size": "Large"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Status",
+          "value": "Pending"
+        },
+        {
+          "title": "Assignment Group",
+          "value": "Cloud Operations"
+        },
+        {
+          "title": "Priority",
+          "value": "P2"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Waiting for incident resolution.",
+      "wrap": true
+    }
+  ]
+}
