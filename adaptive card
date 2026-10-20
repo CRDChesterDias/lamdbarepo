@@ -3,36 +3,51 @@
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
   "type": "AdaptiveCard",
   "version": "1.4",
-  "msteams": {
-    "width": "Full"
-  },
   "body": [
     {
-      "type": "TextBlock",
-      "text": "INC0012345",
-      "size": "ExtraLarge",
-      "weight": "Bolder",
-      "spacing": "Small"
+      "type": "ColumnSet",
+      "spacing": "None",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "INC0012345",
+              "weight": "Bolder",
+              "size": "Medium",
+              "spacing": "None"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "auto",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "● IN PROGRESS",
+              "weight": "Bolder",
+              "size": "Small",
+              "color": "Accent",
+              "spacing": "None"
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "TextBlock",
       "text": "EC2 instance unreachable",
-      "size": "Medium",
-      "weight": "Bolder",
+      "size": "Default",
       "wrap": true,
       "spacing": "Small"
     },
     {
-      "type": "TextBlock",
-      "text": "● IN PROGRESS",
-      "weight": "Bolder",
-      "color": "Accent",
-      "spacing": "Medium"
-    },
-    {
       "type": "ColumnSet",
       "separator": true,
-      "spacing": "Medium",
+      "spacing": "Small",
       "columns": [
         {
           "type": "Column",
@@ -42,14 +57,15 @@
               "type": "TextBlock",
               "text": "Priority",
               "size": "Small",
-              "isSubtle": true
+              "isSubtle": true,
+              "spacing": "None"
             },
             {
               "type": "TextBlock",
               "text": "P2 — High",
               "weight": "Bolder",
-              "spacing": "None",
-              "wrap": true
+              "size": "Small",
+              "spacing": "None"
             }
           ]
         },
@@ -61,12 +77,14 @@
               "type": "TextBlock",
               "text": "Assignment Group",
               "size": "Small",
-              "isSubtle": true
+              "isSubtle": true,
+              "spacing": "None"
             },
             {
               "type": "TextBlock",
               "text": "Cloud Operations",
               "weight": "Bolder",
+              "size": "Small",
               "spacing": "None",
               "wrap": true
             }
@@ -79,14 +97,14 @@
       "text": "Assigned To",
       "size": "Small",
       "isSubtle": true,
-      "spacing": "Medium"
+      "spacing": "Small"
     },
     {
       "type": "TextBlock",
       "text": "Unassigned",
+      "size": "Small",
       "weight": "Bolder",
-      "spacing": "None",
-      "wrap": true
+      "spacing": "None"
     }
   ],
   "actions": [
