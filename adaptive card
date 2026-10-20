@@ -3,40 +3,97 @@
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
   "type": "AdaptiveCard",
   "version": "1.4",
+  "msteams": {
+    "width": "Full"
+  },
   "body": [
     {
       "type": "TextBlock",
-      "text": "ServiceNow Incident",
+      "text": "INC0012345",
+      "size": "ExtraLarge",
       "weight": "Bolder",
-      "size": "Medium"
+      "spacing": "Small"
     },
     {
       "type": "TextBlock",
-      "text": "INC0012345",
+      "text": "EC2 instance unreachable",
+      "size": "Medium",
       "weight": "Bolder",
-      "size": "Large"
+      "wrap": true,
+      "spacing": "Small"
     },
     {
-      "type": "FactSet",
-      "facts": [
+      "type": "TextBlock",
+      "text": "● IN PROGRESS",
+      "weight": "Bolder",
+      "color": "Accent",
+      "spacing": "Medium"
+    },
+    {
+      "type": "ColumnSet",
+      "separator": true,
+      "spacing": "Medium",
+      "columns": [
         {
-          "title": "Status",
-          "value": "Pending"
+          "type": "Column",
+          "width": "1",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Priority",
+              "size": "Small",
+              "isSubtle": true
+            },
+            {
+              "type": "TextBlock",
+              "text": "P2 — High",
+              "weight": "Bolder",
+              "spacing": "None",
+              "wrap": true
+            }
+          ]
         },
         {
-          "title": "Assignment Group",
-          "value": "Cloud Operations"
-        },
-        {
-          "title": "Priority",
-          "value": "P2"
+          "type": "Column",
+          "width": "2",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Assignment Group",
+              "size": "Small",
+              "isSubtle": true
+            },
+            {
+              "type": "TextBlock",
+              "text": "Cloud Operations",
+              "weight": "Bolder",
+              "spacing": "None",
+              "wrap": true
+            }
+          ]
         }
       ]
     },
     {
       "type": "TextBlock",
-      "text": "Waiting for incident resolution.",
+      "text": "Assigned To",
+      "size": "Small",
+      "isSubtle": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Unassigned",
+      "weight": "Bolder",
+      "spacing": "None",
       "wrap": true
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "View Incident",
+      "url": "https://YOUR-INSTANCE.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number%3DINC0012345"
     }
   ]
 }
