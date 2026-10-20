@@ -115,3 +115,10 @@
     }
   ]
 }
+
+
+
+Awaiting Action	○ AWAITING ACTION	Default
+In Progress	● IN PROGRESS	Accent
+Done	✓ DONE	Good
+On Hold	◷ ON HOLD	Warning
